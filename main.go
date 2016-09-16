@@ -5,6 +5,7 @@ import (
     "log"
     "net/http"
     "os"
+    "io/ioutil"
 )
 
 func main() {
@@ -19,5 +20,16 @@ func main() {
 }
 
 func Issues(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintln(w, "Welcome! "+r.UserAgent() )
+  // TODO io.LimitReader
+    body, err := ioutil.ReadAll(r.Body)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Fprintln(w, "")
+    if err := r.Body.Close(); err != nil {
+        log.Fatal(err)
+    }
+
+    log.Print(string(body[:]))
 }
