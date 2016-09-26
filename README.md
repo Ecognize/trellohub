@@ -1,2 +1,4 @@
 # trellohub
-Microservice for synchronising a Trello-based workflow with GitHub issues. 
+Microservice for synchronising a Trello-based workflow with GitHub issues.
+
+# Board Setup

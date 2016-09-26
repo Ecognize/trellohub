@@ -9,14 +9,37 @@ import (
 )
 
 func main() {
-  port := os.Getenv("PORT")
+  /* Check if we are run to [re]-initialise the board */
+  if (len(os.Args) >= 4) {
+    // TODO make a proper class here
+    key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
+    baseurl := "https://api.trello.com/1"
 
-	if port == "" {
-		log.Fatal("$PORT must be set")
-	}
+    resp, err := http.Get(baseurl + "/boards/" + boardid + "?key=" + key + "&token=" + token)
+    // TODO if error
+    defer resp.Body.Close()
+    body, err := ioutil.ReadAll(resp.Body)
+    err = err
 
-  http.HandleFunc("/issues", Issues);
-  log.Fatal(http.ListenAndServe(":"+port, nil))
+    fmt.Println(string(body[:]))
+
+    /* Archive all lists */
+
+    /* Check and activate GitHub powerup */
+
+    /* Create the new lists */
+
+    /* Happily print the JSON */
+  } else {
+    port := os.Getenv("PORT")
+
+  	if port == "" {
+  		log.Fatal("$PORT must be set")
+  	}
+
+    http.HandleFunc("/issues", Issues);
+    log.Fatal(http.ListenAndServe(":"+port, nil))
+  }
 }
 
 func Issues(w http.ResponseWriter, r *http.Request) {
