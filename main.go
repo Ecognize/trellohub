@@ -6,8 +6,20 @@ import (
     "net/http"
     "os"
     "io/ioutil"
+    "encoding/json"
 )
 
+type listData struct {
+  ReposId   string    `json:"repos"`
+  InboxId   string    `json:"inbox"`
+  InWorksId string    `json:"works"`
+  BlockedId string    `json:"block"`
+  ReviewId  string    `json:"review"`
+  MergedId  string    `json:"merged"`
+  DeployId  string    `json:"deploy"`
+  TestId    string    `json:"tested"`
+  AcceptId  string    `json:"accept"`
+}
 
 func main() {
   /* Check if we are run to [re]-initialise the board */
@@ -16,15 +28,29 @@ func main() {
     key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
     trello := NewTrello(key, token, boardid)
 
-    trello.AddList("Inboxae")
-
     /* Archive all lists */
 
     /* Check and activate GitHub powerup */
 
     /* Create the new lists */
 
+    /* Ugly but effective */
+    listdata := listData{
+      trello.AddList("Repositories"),
+      trello.AddList("Inbox"),
+      trello.AddList("In Works"),
+      trello.AddList("Blocked"),
+      trello.AddList("Awaiting Review"),
+      trello.AddList("Merged to Mainline"),
+      trello.AddList("Deployed on Test"),
+      trello.AddList("Tested"),
+      trello.AddList("Accepted"),
+    }
+
     /* Happily print the JSON */
+    data, _ := json.Marshal(listdata)
+    fmt.Println("Set $LISTS to the following value:")
+    fmt.Println(string(data[:]))
   } else {
     port := os.Getenv("PORT")
 

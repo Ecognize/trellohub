@@ -6,7 +6,7 @@ import (
   "encoding/json"
   "io/ioutil"
   "bytes"
-//  "fmt"
+  // "fmt"
 )
 
 /* Generalised functions like JSON decoding or lower level http work */
@@ -27,7 +27,7 @@ func GenGET(this GenAPI, rq string, v interface{}) {
 }
 
 /* Pass a map, process structure later */
-func GenPOSTForm(this GenAPI, rq string, v interface{}, f url.Values) {
+func GenPOSTForm(this GenAPI, rq string, v interface{}, f url.Values) { // TODO replace url.values with a struct
   resp, err := http.PostForm(makeQuery(this, rq), f)
 
   processResponce(resp, err, &v)
@@ -49,5 +49,5 @@ func processResponce(resp *http.Response, err error, v interface{}) {
   /* TODO check json errors */
   json.Unmarshal(body, &v)
 
-//  fmt.Println(string(body[:]))
+  // fmt.Println(string(body[:]))
 }

@@ -31,22 +31,24 @@ func (this *Trello) BaseURL() string {
   return "https://api.trello.com/1"
 }
 
-type boardData struct {
-  Id      string    `json:id`
-  Name    string    `json:name`
+type namedEntity struct {
+  Id      string    `json:"id"`
+  Name    string    `json:"name"`
 }
 
 func (this *Trello) getFullBoardId(boardid string) string {
-  data := boardData{}
+  data := namedEntity{}
   GenGET(this, "/boards/" + boardid, &data)
   return data.Id
 }
 
 /* Adds a list to the board with a given name and returns the list id */
-func (this *Trello) AddList(listname string) {
-  data := boardData{}
-  GenPOSTForm(this, "/lists/", data, url.Values{
+func (this *Trello) AddList(listname string) string {
+  data := namedEntity{}
+  GenPOSTForm(this, "/lists/", &data, url.Values{
     "name": { listname },
     "idBoard": { this.BoardId },
-    "pos": { "top" } })
+    "pos": { "bottom" } })
+
+  return data.Id
 }
