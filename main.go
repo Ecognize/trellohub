@@ -14,9 +14,9 @@ func main() {
   if (len(os.Args) >= 4) {
     // TODO make a proper class here
     key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
-    trello := NewTrello(key, token)
+    trello := NewTrello(key, token, boardid)
 
-    trello.Get("/boards/" + boardid)
+    trello.AddList("Inboxae")
 
     /* Archive all lists */
 
