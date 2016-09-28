@@ -7,7 +7,6 @@ import (
   "io/ioutil"
   "bytes"
   "strings"
-  // "fmt"
 )
 
 /* Generalised functions like JSON decoding or lower level http work */
@@ -39,6 +38,7 @@ func GenPUT(this GenAPI, rq string) {
   req, err := http.NewRequest("PUT", makeQuery(this, rq), nil)
   /* TODO error handling */
   resp, err := client.Do(req)
+  processResponce(resp, err, nil)
 }
 
 /* Pass a map, process structure later */
@@ -58,11 +58,13 @@ func GenPOSTJSON(this GenAPI, rq string, v interface{}, f interface{}) {
 
 func processResponce(resp *http.Response, err error, v interface{}) {
   // TODO check if resp is 200 and err is ok
-  defer resp.Body.Close()
-  body, _ := ioutil.ReadAll(resp.Body)
+  if v != nil {
+    defer resp.Body.Close()
+    body, _ := ioutil.ReadAll(resp.Body)
 
-  /* TODO check json errors */
-  json.Unmarshal(body, &v)
+    /* TODO check json errors */
+    json.Unmarshal(body, &v)
 
-  // fmt.Println(string(body[:]))
+    // fmt.Println(string(body[:]))
+  } 
 }

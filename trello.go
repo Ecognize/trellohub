@@ -65,6 +65,6 @@ func (this *Trello) ListIds() []string {
 }
 
 /* Archives a list */
-func (this *Trello) CloseList(listname string) {
-
+func (this *Trello) CloseList(listid string) {
+  GenPUT(this, "/lists/" + listid + "/closed?value=true")
 }
