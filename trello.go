@@ -6,11 +6,24 @@ import (
 
 /* TODO comments */
 
+type ListRef struct {
+  ReposId   string    `json:"repos"`
+  InboxId   string    `json:"inbox"`
+  InWorksId string    `json:"works"`
+  BlockedId string    `json:"block"`
+  ReviewId  string    `json:"review"`
+  MergedId  string    `json:"merged"`
+  DeployId  string    `json:"deploy"`
+  TestId    string    `json:"tested"`
+  AcceptId  string    `json:"accept"`
+}
+
 /* TODO make private */
 type Trello struct {
   Token string
   Key string
   BoardId string
+  Lists ListRef
 }
 
 func NewTrello(key string, token string, boardid string) *Trello {

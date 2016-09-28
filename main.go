@@ -6,55 +6,52 @@ import (
     "net/http"
     "os"
     "io/ioutil"
-//     "encoding/json"
+    "encoding/json"
 )
 
-type listData struct {
-  ReposId   string    `json:"repos"`
-  InboxId   string    `json:"inbox"`
-  InWorksId string    `json:"works"`
-  BlockedId string    `json:"block"`
-  ReviewId  string    `json:"review"`
-  MergedId  string    `json:"merged"`
-  DeployId  string    `json:"deploy"`
-  TestId    string    `json:"tested"`
-  AcceptId  string    `json:"accept"`
-}
+/* Globals are bad */
+var trello *Trello
 
 func main() {
   /* Check if we are run to [re]-initialise the board */
   if (len(os.Args) >= 4) {
-    // TODO make a proper class here
     key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
-    trello := NewTrello(key, token, boardid)
+    trello = NewTrello(key, token, boardid)
     
-    trello.AddLabel("ErintLabs/io")
-    
-//     /* Archive all open lists */
-//     for _, v := range trello.ListIds() {
-//       trello.CloseList(v)
-//     }
-// 
-//     /* Ugly but effective, creating new lists */
-//     listdata := listData{
-//       trello.AddList("Repositories"),
-//       trello.AddList("Inbox"),
-//       trello.AddList("In Works"),
-//       trello.AddList("Blocked"),
-//       trello.AddList("Awaiting Review"),
-//       trello.AddList("Merged to Mainline"),
-//       trello.AddList("Deployed on Test"),
-//       trello.AddList("Tested"),
-//       trello.AddList("Accepted"),
-//     }
-//     
-//     /* Happily print the JSON */
-//     data, _ := json.Marshal(listdata)
-//     fmt.Println("Set $LISTS to the following value:")
-//     fmt.Println(string(data[:]))
-  } else {
-    port := os.Getenv("PORT")
+    /* Archive all open lists */
+    for _, v := range trello.ListIds() {
+      trello.CloseList(v)
+    }
 
+    /* Ugly but effective, creating new lists */
+    trello.Lists = ListRef{
+      trello.AddList("Repositories"),
+      trello.AddList("Inbox"),
+      trello.AddList("In Works"),
+      trello.AddList("Blocked"),
+      trello.AddList("Awaiting Review"),
+      trello.AddList("Merged to Mainline"),
+      trello.AddList("Deployed on Test"),
+      trello.AddList("Tested"),
+      trello.AddList("Accepted"),
+    }
+    
+    /* Happily print the JSON */
+    data, _ := json.Marshal(trello.Lists)
+    fmt.Println("Set $LISTS to the following value:")
+    fmt.Println(string(data[:]))
+  } else {
+    /* General config */
+    port := os.Getenv("PORT")
+    
+    /* Trello config */
+    trello_key, trello_token := os.Getenv("TRELLO_KEY"), os.Getenv("TRELLO_TOKEN")
+    boardid := os.Getenv("BOARD")
+    trello = NewTrello(trello_key, trello_token, boardid)
+    
+    json.Unmarshal([]byte(os.Getenv("LISTS")), &trello.Lists)
+
+    /* TODO extend for other params */
   	if port == "" {
   		log.Fatal("$PORT must be set")
   	}
