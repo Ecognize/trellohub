@@ -90,3 +90,18 @@ func (this *Trello) MoveCard(cardid string, listid string) {
   GenPUT(this, "/cards/" + cardid + "/idList?value=" + listid)
 }
 
+/* Add a label to board */
+func (this *Trello) AddLabel(name string, color string) string {
+  data := namedEntity{}
+  GenPOSTForm(this, "/labels/", &data, url.Values{
+    "name": { name },
+    "idBoard": { this.BoardId },
+    "color": { color } })
+
+  return data.Id
+}
+
+/* Attach a label to the card */
+func (this *Trello) SetLabel(cardid string, labelid string) {
+    GenPOSTForm(this, "/cards/" + cardid + "/idLabels", nil, url.Values{ "value": { labelid } })
+}

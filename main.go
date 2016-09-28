@@ -28,7 +28,7 @@ func main() {
     key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
     trello := NewTrello(key, token, boardid)
     
-    trello.MoveCard("57ebff26b1dbe934a3abd542", "57ebe9294026d856cccb9455")
+    trello.AddLabel("ErintLabs/io", "black")
     
 //     /* Archive all open lists */
 //     for _, v := range trello.ListIds() {
