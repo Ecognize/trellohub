@@ -9,6 +9,15 @@ import (
     "encoding/json"
 )
 
+/* TODO: move to GitHub */
+type IssuePayload struct {
+  Action  string    `json:"action"`
+  Issue struct {
+    URL   string    `json:"html_url"`
+    Title string    `json:"title"`
+  }                 `json:"issue"`
+}
+
 /* Globals are bad */
 var trello *Trello
 
@@ -63,6 +72,8 @@ func main() {
 
 func Issues(w http.ResponseWriter, r *http.Request) {
   // TODO io.LimitReader
+  // TODO proper code eh?
+  // TODO template method anyway
     body, err := ioutil.ReadAll(r.Body)
     if err != nil {
         log.Fatal(err)
@@ -73,5 +84,20 @@ func Issues(w http.ResponseWriter, r *http.Request) {
         log.Fatal(err)
     }
 
-    log.Print(string(body[:]))
+    /* TODO check json errors */
+    /* TODO check it was github who sent it anyway */
+    /* TODO check whether we serve this repo */
+    var issue IssuePayload 
+    json.Unmarshal(body, &issue)
+    
+    if issue.Action == "opened" {
+      cardid := trello.AddCard(trello.Lists.InboxId, issue.Issue.Title)
+      trello.AttachURL(cardid, issue.Issue.URL)
+      
+      log.Printf("Creating card %s for issue %s\n", cardid, issue.Issue.URL)
+    }
+    
+    //log.Print(string(body[:]))
+    
+    /* TODO: return 200 */
 }
