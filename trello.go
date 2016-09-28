@@ -84,3 +84,9 @@ func (this *Trello) CloseList(listid string) {
 func (this *Trello) AttachURL(cardid string, addr string) {
   GenPOSTForm(this, "/cards/" + cardid + "/attachments", nil, url.Values{ "url": { addr } })
 }
+
+/* Move a card to the different list */
+func (this *Trello) MoveCard(cardid string, listid string) {
+  GenPUT(this, "/cards/" + cardid + "/idList?value=" + listid)
+}
+

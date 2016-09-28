@@ -65,7 +65,7 @@ func processResponce(resp *http.Response, err error, v interface{}) {
     body, _ := ioutil.ReadAll(resp.Body)
         
     if resp.StatusCode != 200 {
-      log.Fatalf("HTTP request returned response %d\n", resp.StatusCode)
+      log.Printf("HTTP request returned response %d\n", resp.StatusCode)
       log.Fatalln(string(body[:]))
     } else if v != nil {
       /* TODO check json errors */
