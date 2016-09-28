@@ -79,3 +79,8 @@ func (this *Trello) ListIds() []string {
 func (this *Trello) CloseList(listid string) {
   GenPUT(this, "/lists/" + listid + "/closed?value=true")
 }
+
+/* Attaches a named URL to the card */
+func (this *Trello) AttachURL(cardid string, addr string) {
+  GenPOSTForm(this, "/cards/" + cardid + "/attachments", nil, url.Values{ "url": { addr } })
+}

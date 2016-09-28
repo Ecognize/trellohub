@@ -28,7 +28,7 @@ func main() {
     key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
     trello := NewTrello(key, token, boardid)
     
-    trello.AddCard("57ebe9294026d856cccb9455", "Test adding cards")
+    trello.AttachURL("57ebff26b1dbe934a3abd542", "https://github.com/EnterpriseQualityCoding/FizzBuzzEnterpriseEdition/issues/268")
     
 //     /* Archive all open lists */
 //     for _, v := range trello.ListIds() {
