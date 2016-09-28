@@ -7,6 +7,7 @@ import (
   "io/ioutil"
   "bytes"
   "strings"
+  "log"
 )
 
 /* Generalised functions like JSON decoding or lower level http work */
@@ -57,8 +58,11 @@ func GenPOSTJSON(this GenAPI, rq string, v interface{}, f interface{}) {
 }
 
 func processResponce(resp *http.Response, err error, v interface{}) {
-  // TODO check if resp is 200 and err is ok
-  if v != nil {
+  if err != nil {
+    log.Fatal(err)
+  } else if resp.StatusCode != 200 {
+    log.Fatalf("HTTP request returned response %d", resp.StatusCode)
+  } else if v != nil {
     defer resp.Body.Close()
     body, _ := ioutil.ReadAll(resp.Body)
 
