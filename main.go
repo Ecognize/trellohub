@@ -6,7 +6,7 @@ import (
     "net/http"
     "os"
     "io/ioutil"
-    // "encoding/json"
+//     "encoding/json"
 )
 
 type listData struct {
@@ -27,33 +27,31 @@ func main() {
     // TODO make a proper class here
     key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
     trello := NewTrello(key, token, boardid)
-
-    /* Archive all open lists */
-    for _, v := range trello.ListIds() {
-      trello.CloseList(v)
-    }
-
-    /* Check and activate GitHub powerup */
-
-    /* Create the new lists */
-
-    /* Ugly but effective */
-    // listdata := listData{
-    //   trello.AddList("Repositories"),
-    //   trello.AddList("Inbox"),
-    //   trello.AddList("In Works"),
-    //   trello.AddList("Blocked"),
-    //   trello.AddList("Awaiting Review"),
-    //   trello.AddList("Merged to Mainline"),
-    //   trello.AddList("Deployed on Test"),
-    //   trello.AddList("Tested"),
-    //   trello.AddList("Accepted"),
-    // }
-    //
-    // /* Happily print the JSON */
-    // data, _ := json.Marshal(listdata)
-    // fmt.Println("Set $LISTS to the following value:")
-    // fmt.Println(string(data[:]))
+    
+    trello.AddCard("57ebe9294026d856cccb9455", "Test adding cards")
+    
+//     /* Archive all open lists */
+//     for _, v := range trello.ListIds() {
+//       trello.CloseList(v)
+//     }
+// 
+//     /* Ugly but effective, creating new lists */
+//     listdata := listData{
+//       trello.AddList("Repositories"),
+//       trello.AddList("Inbox"),
+//       trello.AddList("In Works"),
+//       trello.AddList("Blocked"),
+//       trello.AddList("Awaiting Review"),
+//       trello.AddList("Merged to Mainline"),
+//       trello.AddList("Deployed on Test"),
+//       trello.AddList("Tested"),
+//       trello.AddList("Accepted"),
+//     }
+//     
+//     /* Happily print the JSON */
+//     data, _ := json.Marshal(listdata)
+//     fmt.Println("Set $LISTS to the following value:")
+//     fmt.Println(string(data[:]))
   } else {
     port := os.Getenv("PORT")
 

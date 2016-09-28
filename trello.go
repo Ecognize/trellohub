@@ -53,6 +53,17 @@ func (this *Trello) AddList(listname string) string {
   return data.Id
 }
 
+/* Adds a card to the list with a given name and returns the card id */
+func (this *Trello) AddCard(listid string, cardname string) string {
+  data := namedEntity{}
+  GenPOSTForm(this, "/cards/", &data, url.Values{
+    "name": { cardname },
+    "idList": { listid },
+    "pos": { "top" } })
+
+  return data.Id
+}
+
 /* Lists all the open lists on the board */
 func (this *Trello) ListIds() []string {
   var data []namedEntity

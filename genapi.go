@@ -60,15 +60,18 @@ func GenPOSTJSON(this GenAPI, rq string, v interface{}, f interface{}) {
 func processResponce(resp *http.Response, err error, v interface{}) {
   if err != nil {
     log.Fatal(err)
-  } else if resp.StatusCode != 200 {
-    log.Fatalf("HTTP request returned response %d", resp.StatusCode)
-  } else if v != nil {
+  } else {
     defer resp.Body.Close()
     body, _ := ioutil.ReadAll(resp.Body)
-
-    /* TODO check json errors */
-    json.Unmarshal(body, &v)
-
-    // fmt.Println(string(body[:]))
+        
+    if resp.StatusCode != 200 {
+      log.Fatalf("HTTP request returned response %d\n", resp.StatusCode)
+      log.Fatalln(string(body[:]))
+    } else if v != nil {
+      /* TODO check json errors */
+      json.Unmarshal(body, &v)
+    }
+    
+    //log.Println(string(body[:]))
   } 
 }
