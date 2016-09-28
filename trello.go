@@ -91,12 +91,21 @@ func (this *Trello) MoveCard(cardid string, listid string) {
 }
 
 /* Add a label to board */
-func (this *Trello) AddLabel(name string, color string) string {
+func (this *Trello) AddLabel(name string) string {
+  /* Pick up a color first */
+  colors := [...]string { "green", "yellow", "orange", "red", "purple", "blue", "sky", "lime", "pink", "black" }
+  
+  var labels []namedEntity
+  GenGET(this, "/boards/" + this.BoardId + "/labels/", &labels)
+  
+  /* TODO: avoid duplicates too */
+  
+  /* Create a label with appropriate color */
   data := namedEntity{}
   GenPOSTForm(this, "/labels/", &data, url.Values{
     "name": { name },
     "idBoard": { this.BoardId },
-    "color": { color } })
+    "color": { colors[ (len(labels)-6) % len(colors) ] } })
 
   return data.Id
 }

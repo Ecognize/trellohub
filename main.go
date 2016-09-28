@@ -28,7 +28,7 @@ func main() {
     key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
     trello := NewTrello(key, token, boardid)
     
-    trello.AddLabel("ErintLabs/io", "black")
+    trello.AddLabel("ErintLabs/io")
     
 //     /* Archive all open lists */
 //     for _, v := range trello.ListIds() {
