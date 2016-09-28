@@ -24,7 +24,7 @@ func NewTrello(key string, token string, boardid string) *Trello {
 }
 
 func (this *Trello) AuthQuery() string {
-  return "?key=" + this.Key + "&token=" + this.Token
+  return "key=" + this.Key + "&token=" + this.Token
 }
 
 func (this *Trello) BaseURL() string {
@@ -51,4 +51,20 @@ func (this *Trello) AddList(listname string) string {
     "pos": { "bottom" } })
 
   return data.Id
+}
+
+/* Lists all the open lists on the board */
+func (this *Trello) ListIds() []string {
+  var data []namedEntity
+  GenGET(this, "/boards/" + this.BoardId + "/lists/?filter=open", &data)
+  res := make([]string, len(data))
+  for i, v := range data {
+    res[i] = v.Id
+  }
+  return res
+}
+
+/* Archives a list */
+func (this *Trello) CloseList(listname string) {
+
 }

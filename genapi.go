@@ -6,6 +6,7 @@ import (
   "encoding/json"
   "io/ioutil"
   "bytes"
+  "strings"
   // "fmt"
 )
 
@@ -16,7 +17,13 @@ type GenAPI interface {
 }
 
 func makeQuery(this GenAPI, rq string) string {
-  return this.BaseURL() + rq + this.AuthQuery()
+  var delim string
+  if strings.Contains(rq, "?") {
+    delim = "&"
+  } else {
+    delim = "?"
+  }
+  return this.BaseURL() + rq + delim + this.AuthQuery()
 }
 
 /* HTTP method funcs basically all do the same, they compose the query and
@@ -24,6 +31,14 @@ func makeQuery(this GenAPI, rq string) string {
 func GenGET(this GenAPI, rq string, v interface{}) {
   resp, err := http.Get(makeQuery(this, rq))
   processResponce(resp, err, &v)
+}
+
+/* Apparently no PUT support in standard library, currently no output */
+func GenPUT(this GenAPI, rq string) {
+  client := &http.Client{}
+  req, err := http.NewRequest("PUT", makeQuery(this, rq), nil)
+  /* TODO error handling */
+  resp, err := client.Do(req)
 }
 
 /* Pass a map, process structure later */
