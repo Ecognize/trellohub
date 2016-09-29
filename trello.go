@@ -49,28 +49,26 @@ func (this *Trello) BaseURL() string {
   return "https://api.trello.com/1"
 }
 
-type namedEntity struct {
+type TrelloObject struct {
   Id      string    `json:"id"`
   Name    string    `json:"name"`
 }
 
-type tokenInfo struct {
-  Webhooks  []struct {
+type webhookInfo struct {
     Id    string    `json:"id"`
     Model string    `json:"idModel"`
     URL   string    `json:"callbackURL"`
-  }                 `json:"webhooks"`
 }
 
 func (this *Trello) getFullBoardId(boardid string) string {
-  data := namedEntity{}
+  data := TrelloObject{}
   GenGET(this, "/boards/" + boardid, &data)
   return data.Id
 }
 
 /* Adds a list to the board with a given name and returns the list id */
 func (this *Trello) AddList(listname string) string {
-  data := namedEntity{}
+  data := TrelloObject{}
   GenPOSTForm(this, "/lists/", &data, url.Values{
     "name": { listname },
     "idBoard": { this.BoardId },
@@ -81,7 +79,7 @@ func (this *Trello) AddList(listname string) string {
 
 /* Adds a card to the list with a given name and returns the card id */
 func (this *Trello) AddCard(listid string, name string, desc string) string {
-  data := namedEntity{}
+  data := TrelloObject{}
   GenPOSTForm(this, "/cards/", &data, url.Values{
     "name": { name },
     "idList": { listid },
@@ -93,7 +91,7 @@ func (this *Trello) AddCard(listid string, name string, desc string) string {
 
 /* Lists all the open lists on the board */
 func (this *Trello) ListIds() []string {
-  var data []namedEntity
+  var data []TrelloObject
   GenGET(this, "/boards/" + this.BoardId + "/lists/?filter=open", &data)
   res := make([]string, len(data))
   for i, v := range data {
@@ -122,13 +120,13 @@ func (this *Trello) AddLabel(name string) string {
   /* Pick up a color first */
   colors := [...]string { "green", "yellow", "orange", "red", "purple", "blue", "sky", "lime", "pink", "black" }
 
-  var labels []namedEntity
+  var labels []TrelloObject
   GenGET(this, "/boards/" + this.BoardId + "/labels/", &labels)
 
   /* TODO: avoid duplicates too */
 
   /* Create a label with appropriate color */
-  data := namedEntity{}
+  data := TrelloObject{}
   GenPOSTForm(this, "/labels/", &data, url.Values{
     "name": { name },
     "idBoard": { this.BoardId },
@@ -144,7 +142,7 @@ func (this *Trello) SetLabel(cardid string, labelid string) {
 
 /* Build a repo to label correspondence cache */
 func (this *Trello) makeLabelCache() bool {
-  var labels []namedEntity
+  var labels []TrelloObject
   GenGET(this, "/boards/" + this.BoardId + "/labels/", &labels)
 
   for _, v := range labels {
@@ -180,11 +178,11 @@ func (this *Trello) FindLabel(addr string) string {
 /* Checks that a webhook is installed over the board, in case it isn't creates one */
 func (this *Trello) EnsureHook(callbackURL string) {
   /* Check if we have a hook already */
-  data := tokenInfo{}
+  var data []webhookInfo
   GenGET(this, "/token/" + this.Token + "/webhooks/", &data)
   found := false
 
-  for _, v := range data.Webhooks {
+  for _, v := range data {
     /* Remove a hook if it points to some other URL, but same Model */
     if v.Model == this.BoardId {
       if v.URL != callbackURL {

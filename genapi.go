@@ -80,6 +80,6 @@ func processResponce(resp *http.Response, err error, v interface{}) {
       json.Unmarshal(body, &v)
     }
 
-    //log.Println(string(body[:]))
+    // log.Println(string(body[:]))
   }
 }

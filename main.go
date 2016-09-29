@@ -19,6 +19,20 @@ type IssuePayload struct {
   }                 `json:"issue"`
 }
 
+/* TODO: move to Trello */
+type TrelloPayload struct {
+  Model     struct {
+    List    TrelloObject  `json:"list"`
+    Card    TrelloObject  `json:"card"`
+    Attach  struct {
+      URL   string        `json:"url"`
+    }                     `json:"attachment"`
+  }                       `json:"model"`
+  Action    struct {
+    Type      string      `json:"type"`
+  }                       `json:"action"`
+}
+
 /* Globals are bad */
 var trello *Trello
 
@@ -72,6 +86,7 @@ func main() {
     http.HandleFunc("/issues", IssuesFunc)
 
     /* Ensuring Trello hook */
+    /* TODO: study if this doesn't cause races */
     go trello.EnsureHook(base_url + "/trello")
 
     /* Starting the server up */
@@ -112,6 +127,16 @@ func GeneralisedProcess(w http.ResponseWriter, r *http.Request, f handleSubrouti
 
 func TrelloFunc(w http.ResponseWriter, r *http.Request) {
   GeneralisedProcess(w, r, func (body []byte) (int, string) {
+    event := TrelloPayload{}
+    json.Unmarshal(body, &event)
+
+    log.Printf("%#v", event)
+
+    /* TODO: switch */
+    if event.Action.Type == "addAttachmentToCard" {
+      log.Printf("Attachment added! %s", event.Model.Attach.URL)
+    }
+
     log.Print(string(body[:]))
     return http.StatusOK, "Erm, hello"
   })
