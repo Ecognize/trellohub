@@ -189,9 +189,11 @@ func (this *Trello) EnsureHook(callbackURL string) {
     if v.Model == this.BoardId {
       if v.URL != callbackURL {
         log.Printf("Found a hook on a different URL: %s. Removing.", v.URL)
-        //GenDEL(this, "/webhooks/" + v.Id)
+        GenDEL(this, "/webhooks/" + v.Id)
       } else {
+        log.Print("Hook found, nothing to do here.")
         found = true
+        break
       }
     }
   }

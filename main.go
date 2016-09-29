@@ -67,12 +67,12 @@ func main() {
   		log.Fatal("$PORT must be set")
   	}
 
-    /* Ensuring Trello hook */
-    // trello.EnsureHook(base_url + "/trello")
-
     /* Registering handlers */
     http.HandleFunc("/trello", TrelloFunc)
     http.HandleFunc("/issues", IssuesFunc)
+
+    /* Ensuring Trello hook */
+    go trello.EnsureHook(base_url + "/trello")
 
     /* Starting the server up */
     log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -111,6 +111,10 @@ func GeneralisedProcess(w http.ResponseWriter, r *http.Request, f handleSubrouti
 }
 
 func TrelloFunc(w http.ResponseWriter, r *http.Request) {
+  GeneralisedProcess(w, r, func (body []byte) (int, string) {
+    log.Print(string(body[:]))
+    return http.StatusOK, "Erm, hello"
+  })
 }
 
 func IssuesFunc(w http.ResponseWriter, r *http.Request) {

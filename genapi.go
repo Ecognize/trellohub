@@ -33,13 +33,21 @@ func GenGET(this GenAPI, rq string, v interface{}) {
   processResponce(resp, err, &v)
 }
 
-/* Apparently no PUT support in standard library, currently no output */
-func GenPUT(this GenAPI, rq string) {
+/* Apparently no PUT or DELETE support in standard library, currently no output */
+func emptyRequest(this GenAPI, method string, rq string) {
   client := &http.Client{}
   req, err := http.NewRequest("PUT", makeQuery(this, rq), nil)
   /* TODO error handling */
   resp, err := client.Do(req)
   processResponce(resp, err, nil)
+}
+
+func GenPUT(this GenAPI, rq string) {
+  emptyRequest(this, "PUT", rq)
+}
+
+func GenDEL(this GenAPI, rq string) {
+  emptyRequest(this, "DELETE", rq)
 }
 
 /* Pass a map, process structure later */
@@ -63,7 +71,7 @@ func processResponce(resp *http.Response, err error, v interface{}) {
   } else {
     defer resp.Body.Close()
     body, _ := ioutil.ReadAll(resp.Body)
-        
+
     if resp.StatusCode != 200 {
       log.Printf("HTTP request returned response %d\n", resp.StatusCode)
       log.Fatalln(string(body[:]))
@@ -71,7 +79,7 @@ func processResponce(resp *http.Response, err error, v interface{}) {
       /* TODO check json errors */
       json.Unmarshal(body, &v)
     }
-    
+
     //log.Println(string(body[:]))
-  } 
+  }
 }
