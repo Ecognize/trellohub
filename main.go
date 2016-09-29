@@ -86,8 +86,13 @@ func main() {
 
     /* Registering handlers */
     http.HandleFunc("/trello", TrelloFunc)
+    http.HandleFunc("/trello/", TrelloFunc)
+
     http.HandleFunc("/issues", IssuesFunc)
+    http.HandleFunc("/issues/", IssuesFunc)
+
     http.HandleFunc("/pull", PullFunc)
+    http.HandleFunc("/pull/", PullFunc)
 
     /* Ensuring Trello hook */
     /* TODO: study if this doesn't cause races */
