@@ -57,6 +57,7 @@ func main() {
     /* Trello config */
     trello_key, trello_token := os.Getenv("TRELLO_KEY"), os.Getenv("TRELLO_TOKEN")
     boardid := os.Getenv("BOARD")
+    base_url := os.Getenv("URL")
     trello = NewTrello(trello_key, trello_token, boardid)
 
     json.Unmarshal([]byte(os.Getenv("LISTS")), &trello.Lists)
@@ -66,21 +67,54 @@ func main() {
   		log.Fatal("$PORT must be set")
   	}
 
-    http.HandleFunc("/issues", Issues);
+    /* Ensuring Trello hook */
+    // trello.EnsureHook(base_url + "/trello")
+
+    /* Registering handlers */
+    http.HandleFunc("/trello", TrelloFunc)
+    http.HandleFunc("/issues", IssuesFunc)
+
+    /* Starting the server up */
     log.Fatal(http.ListenAndServe(":"+port, nil))
   }
 }
 
-func Issues(w http.ResponseWriter, r *http.Request) {
-  // TODO io.LimitReader
-  // TODO proper code eh?
-  // TODO template method anyway
-  // TODO check if its HEAD or POST
-    body, err := ioutil.ReadAll(r.Body)
-    if err != nil {
-        log.Fatal(err)
-    }
+type handleSubroutine func (body []byte) (int, string)
 
+func GeneralisedProcess(w http.ResponseWriter, r *http.Request, f handleSubroutine) {
+  // TODO io.LimitReader
+  // TODO check if its or POST
+  body, err := ioutil.ReadAll(r.Body)
+  if err != nil {
+      log.Fatal(err)
+  }
+
+  /* Invoking the actual function */
+  //log.Print(string(body[:]))
+  var code int
+  var text string
+
+  if r.Method != "HEAD" {
+    code, text = f(body)
+  } else { /* or not, if it's a HEAD */
+    code, text = http.StatusOK, "Pleased to meet you."
+  }
+
+  /* Replying to the caller */
+  w.WriteHeader(code)
+  fmt.Fprintln(w, text)
+
+  /* Finalise session */
+  if err := r.Body.Close(); err != nil {
+      log.Fatal(err)
+  }
+}
+
+func TrelloFunc(w http.ResponseWriter, r *http.Request) {
+}
+
+func IssuesFunc(w http.ResponseWriter, r *http.Request) {
+  GeneralisedProcess(w, r, func (body []byte) (int, string) {
     /* TODO check json errors */
     /* TODO check it was github who sent it anyway */
     /* TODO check whether we serve this repo */
@@ -98,19 +132,11 @@ func Issues(w http.ResponseWriter, r *http.Request) {
 
         /* Happily report */
         log.Printf("Creating card %s for issue %s\n", cardid, issue.Issue.URL)
-        w.WriteHeader(http.StatusOK)
-        fmt.Fprintln(w, "Got your back, captain.")
+        return http.StatusOK, "Got your back, captain."
       } else {
-        w.WriteHeader(http.StatusNotFound)
-        fmt.Fprintln(w, "You sure we serve this repo? I don't think so.")
+        return http.StatusNotFound, "You sure we serve this repo? I don't think so."
       }
     }
-
-    //log.Print(string(body[:]))
-
-
-    /* Finalise session */
-    if err := r.Body.Close(); err != nil {
-        log.Fatal(err)
-    }
+    return http.StatusOK, "I can't really process this, but fine."
+  })
 }

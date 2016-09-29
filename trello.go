@@ -7,7 +7,6 @@ import (
 )
 
 /* TODO comments */
-
 type ListRef struct {
   ReposId   string    `json:"repos"`
   InboxId   string    `json:"inbox"`
@@ -53,6 +52,14 @@ func (this *Trello) BaseURL() string {
 type namedEntity struct {
   Id      string    `json:"id"`
   Name    string    `json:"name"`
+}
+
+type tokenInfo struct {
+  Webhooks  []struct {
+    Id    string    `json:"id"`
+    Model string    `json:"idModel"`
+    URL   string    `json:"callbackURL"`
+  }                 `json:"webhooks"`
 }
 
 func (this *Trello) getFullBoardId(boardid string) string {
@@ -168,4 +175,37 @@ func (this *Trello) FindLabel(addr string) string {
 
   /* If we are still there, something's wrong */
   return ""
+}
+
+/* Checks that a webhook is installed over the board, in case it isn't creates one */
+func (this *Trello) EnsureHook(callbackURL string) {
+  /* Check if we have a hook already */
+  data := tokenInfo{}
+  GenGET(this, "/token/" + this.Token + "/webhooks/", &data)
+  found := false
+
+  for _, v := range data.Webhooks {
+    /* Remove a hook if it points to some other URL, but same Model */
+    if v.Model == this.BoardId {
+      if v.URL != callbackURL {
+        log.Printf("Found a hook on a different URL: %s. Removing.", v.URL)
+        //GenDEL(this, "/webhooks/" + v.Id)
+      } else {
+        found = true
+      }
+    }
+  }
+
+  /* If not, install one */
+  if !found {
+    /* TODO: save hook reference and uninstall maybe? */
+    GenPOSTForm(this, "/webhooks/", nil, url.Values{
+      "name": { "trellohub for " + this.BoardId },
+      "idModel": { this.BoardId },
+      "callbackURL": { callbackURL } })
+
+    log.Print("Webhook installed.")
+  } else {
+    log.Print("Reusing existing webhook.")
+  }
 }
