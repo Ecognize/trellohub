@@ -7,6 +7,7 @@ import (
     "os"
     "io/ioutil"
     "encoding/json"
+    "regexp"
 )
 
 /* TODO: move to GitHub */
@@ -21,22 +22,24 @@ type IssuePayload struct {
 
 /* TODO: move to Trello */
 type TrelloPayload struct {
-  Model     struct {
-    List    TrelloObject  `json:"list"`
-    Card    TrelloObject  `json:"card"`
-    Attach  struct {
-      URL   string        `json:"url"`
-    }                     `json:"attachment"`
-  }                       `json:"model"`
-  Action    struct {
-    Type      string      `json:"type"`
-  }                       `json:"action"`
+  Action      struct {
+    Type      string        `json:"type"`
+    Data      struct {
+      List    TrelloObject  `json:"list"`
+      Card    TrelloObject  `json:"card"`
+      Attach  struct {
+        URL   string        `json:"url"`
+      }                     `json:"attachment"`
+    }                       `json:"data"`
+  }                         `json:"action"`
 }
 
 /* Globals are bad */
 var trello *Trello
+const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)"
 
 func main() {
+
   /* Check if we are run to [re]-initialise the board */
   if (len(os.Args) >= 4) {
     key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
@@ -130,14 +133,28 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
     event := TrelloPayload{}
     json.Unmarshal(body, &event)
 
-    log.Printf("%#v", event)
-
     /* TODO: switch */
     if event.Action.Type == "addAttachmentToCard" {
-      log.Printf("Attachment added! %s", event.Model.Attach.URL)
+      // TODO: also install GitHub webhooks when possible
+
+      /* Check if this is a GitHub URL after all */
+      re := regexp.MustCompile(REGEX_GH_REPO)
+      if res := re.FindStringSubmatch(event.Action.Data.Attach.URL); res != nil {
+        repoid := res[2] + "/" + res[3]
+        log.Printf("Registering new repository: %s.", repoid)
+
+        /* Add a label, but make sure no duplicates happen */
+        if trello.GetLabel(repoid) == "" {
+          trello.SetLabel(event.Action.Data.Card.Id, trello.AddLabel(repoid))
+        } else {
+          log.Print("Label already there, not proceeding.")
+        }
+      }
+
+      return http.StatusOK, "Attachment processed."
     }
 
-    log.Print(string(body[:]))
+    // log.Print(string(body[:]))
     return http.StatusOK, "Erm, hello"
   })
 }

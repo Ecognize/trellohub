@@ -152,11 +152,25 @@ func (this *Trello) makeLabelCache() bool {
   return true // needed for dirty magic
 }
 
+/* Get the label id or empty string if not found */
+func (this *Trello) GetLabel(repoid string) string {
+  log.Print("Query "+repoid)
+  /* Look in cache, if not there retry */
+  for updated := false; !updated; updated = this.makeLabelCache() {
+    if id, ok := this.labelCache[repoid]; ok {
+      return id
+    }
+  }
+
+  /* If we are still there, something's wrong */
+  return ""
+}
+
 /* Looks up a label to corresponding repository, returns an empty string if not found */
 func (this *Trello) FindLabel(addr string) string {
   /* Break the incoming string down to just Owner/repo */
   var key string
-  re := regexp.MustCompile("^(https?://)?github.com/([^/]*)/([^/]*)")
+  re := regexp.MustCompile(REGEX_GH_REPO)
   if res := re.FindStringSubmatch(addr); res != nil {
     key = res[2] + "/" + res[3]
   } else {
@@ -164,15 +178,7 @@ func (this *Trello) FindLabel(addr string) string {
     return ""
   }
 
-  /* Look in cache, if not there retry */
-  for updated := false; !updated; updated = this.makeLabelCache() {
-    if id, ok := this.labelCache[key]; ok {
-      return id
-    }
-  }
-
-  /* If we are still there, something's wrong */
-  return ""
+  return this.GetLabel(key)
 }
 
 /* Checks that a webhook is installed over the board, in case it isn't creates one */
