@@ -49,7 +49,7 @@ func main() {
     for _, v := range trello.ListIds() {
       trello.CloseList(v)
     }
-    
+
     /* Ugly but effective, creating new lists */
     trello.Lists = ListRef{
       trello.AddList("Repositories"),
@@ -162,7 +162,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
       return http.StatusOK, "Attachment processed."
     }
 
-    //log.Print(string(body[:]))
+    log.Print(string(body[:]))
     return http.StatusOK, "Erm, hello"
   })
 }
