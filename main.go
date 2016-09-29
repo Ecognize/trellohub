@@ -15,6 +15,7 @@ type IssuePayload struct {
   Issue struct {
     URL   string    `json:"html_url"`
     Title string    `json:"title"`
+    Body  string    `json:"body"`
   }                 `json:"issue"`
 }
 
@@ -91,7 +92,7 @@ func Issues(w http.ResponseWriter, r *http.Request) {
       /* Look up the corresponding label */
       if labelid := trello.FindLabel(issue.Issue.URL); len(labelid) > 0 {
         /* Insert the card, attach the issue and label */
-        cardid := trello.AddCard(trello.Lists.InboxId, issue.Issue.Title)
+        cardid := trello.AddCard(trello.Lists.InboxId, issue.Issue.Title, issue.Issue.Body)
         trello.AttachURL(cardid, issue.Issue.URL)
         trello.SetLabel(cardid, labelid)
 
