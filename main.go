@@ -87,6 +87,7 @@ func main() {
     /* Registering handlers */
     http.HandleFunc("/trello", TrelloFunc)
     http.HandleFunc("/issues", IssuesFunc)
+    http.HandleFunc("/pull", PullFunc)
 
     /* Ensuring Trello hook */
     /* TODO: study if this doesn't cause races */
@@ -185,6 +186,14 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."
       }
     }
+    return http.StatusOK, "I can't really process this, but fine."
+  })
+}
+
+func PullFunc(w http.ResponseWriter, r *http.Request) {
+  GeneralisedProcess(w, r, func (body []byte) (int, string) {
+    log.Print(string(body[:]))
+
     return http.StatusOK, "I can't really process this, but fine."
   })
 }
