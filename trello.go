@@ -215,3 +215,10 @@ func (this *Trello) EnsureHook(callbackURL string) {
     log.Print("Reusing existing webhook.")
   }
 }
+
+/* Returns the list currently containing the card */
+func (this *Trello) CardList(cardid string) string {
+  data := TrelloObject{}
+  GenGET(this, "/cards/" + cardid + "/list/", &data)
+  return data.Id
+}

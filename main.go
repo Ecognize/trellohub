@@ -136,25 +136,27 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
     /* TODO: switch */
     if event.Action.Type == "addAttachmentToCard" {
       // TODO: also install GitHub webhooks when possible
+      /* Check if the list is correct */
+      if trello.CardList(event.Action.Data.Card.Id) == trello.Lists.ReposId {
+        /* Check if this is a GitHub URL after all */
+        re := regexp.MustCompile(REGEX_GH_REPO)
+        if res := re.FindStringSubmatch(event.Action.Data.Attach.URL); res != nil {
+          repoid := res[2] + "/" + res[3]
+          log.Printf("Registering new repository: %s.", repoid)
 
-      /* Check if this is a GitHub URL after all */
-      re := regexp.MustCompile(REGEX_GH_REPO)
-      if res := re.FindStringSubmatch(event.Action.Data.Attach.URL); res != nil {
-        repoid := res[2] + "/" + res[3]
-        log.Printf("Registering new repository: %s.", repoid)
-
-        /* Add a label, but make sure no duplicates happen */
-        if trello.GetLabel(repoid) == "" {
-          trello.SetLabel(event.Action.Data.Card.Id, trello.AddLabel(repoid))
-        } else {
-          log.Print("Label already there, not proceeding.")
+          /* Add a label, but make sure no duplicates happen */
+          if trello.GetLabel(repoid) == "" {
+            trello.SetLabel(event.Action.Data.Card.Id, trello.AddLabel(repoid))
+          } else {
+            log.Print("Label already there, not proceeding.")
+          }
         }
       }
 
       return http.StatusOK, "Attachment processed."
     }
 
-    // log.Print(string(body[:]))
+    //log.Print(string(body[:]))
     return http.StatusOK, "Erm, hello"
   })
 }
