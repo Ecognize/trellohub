@@ -36,10 +36,10 @@ type TrelloPayload struct {
 
 /* Globals are bad */
 var trello *Trello
+var github *GitHub;
 const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)"
 
 func main() {
-
   /* Check if we are run to [re]-initialise the board */
   if (len(os.Args) >= 4) {
     key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
@@ -49,7 +49,7 @@ func main() {
     for _, v := range trello.ListIds() {
       trello.CloseList(v)
     }
-
+    
     /* Ugly but effective, creating new lists */
     trello.Lists = ListRef{
       trello.AddList("Repositories"),

@@ -17,7 +17,9 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
   - Attaches the issue URL to the card
   - Applies the repository label to the card
   - On GitHub assigns the "inbox" label to the issue
+
   
 # Far Horizon
+
 - Handle renamings
 - Handle forced push of pull request data
