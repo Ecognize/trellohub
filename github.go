@@ -159,7 +159,7 @@ func (this *GitHub) EnsureHook(repoid string, callbackURLbase string) {
       wh.Events = []string{ f.event }
       wh.Config.Type = "json"
       wh.Config.URL = callbackURLbase + k
-      log.Printf("Creating a hook for %s at %s", wh.Config.URL)
+      log.Printf("Creating a hook for %s at %s", wh.Config.URL, repoid)
       GenPOSTJSON(this, "repos/" + repoid + "/hooks", nil, &wh)
     }
   }
