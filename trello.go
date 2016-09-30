@@ -135,11 +135,15 @@ func (this *Trello) AddLabel(name string) string {
   /* TODO: avoid duplicates too */
 
   /* Create a label with appropriate color */
+  col := colors[ (len(labels)-6) % len(colors) ]
+  log.Printf("Creating a new %s label name %s in Trello.", col, name)
   data := TrelloObject{}
   GenPOSTForm(this, "/labels/", &data, url.Values{
     "name": { name },
     "idBoard": { this.BoardId },
-    "color": { colors[ (len(labels)-6) % len(colors) ] } })
+    "color": { col } })
+
+  this.labelCache[name] = data.Id 
 
   return data.Id
 }
@@ -163,7 +167,6 @@ func (this *Trello) makeLabelCache() bool {
 
 /* Get the label id or empty string if not found */
 func (this *Trello) GetLabel(repoid string) string {
-  log.Print("Query "+repoid)
   /* Look in cache, if not there retry */
   for updated := false; !updated; updated = this.makeLabelCache() {
     if id, ok := this.labelCache[repoid]; ok {
