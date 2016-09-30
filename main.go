@@ -230,6 +230,14 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         trello.AttachURL(cardid, issue.Issue.URL)
         trello.SetLabel(cardid, labelid)
 
+        re := regexp.MustCompile(REGEX_GH_REPO + "/issues/([0-9]*)")
+        if res := re.FindStringSubmatch(issue.Issue.URL); res != nil {
+          // TODO cache
+          issue := IssueSpec{ res[2] + "/" + res[3], 0 }
+          issue.iid, _ = strconv.Atoi(res[4])
+          github.AddLabel(issue, "inbox")
+        }
+
         /* Happily report */
         log.Printf("Creating card %s for issue %s\n", cardid, issue.Issue.URL)
         return http.StatusOK, "Got your back, captain."
