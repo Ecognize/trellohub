@@ -222,3 +222,14 @@ func (this *Trello) CardList(cardid string) string {
   GenGET(this, "/cards/" + cardid + "/list/", &data)
   return data.Id
 }
+
+/* Returns the name(technically URL) of the first attachment to the card */
+func (this *Trello) FirstLink(cardid string) string {
+  var data []TrelloObject
+  GenGET(this, "/cards/" + cardid + "/attachments/", &data)
+
+  if len(data) > 0 {
+    return data[0].Name
+  }
+  return ""
+}

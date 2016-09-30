@@ -36,7 +36,7 @@ func GenGET(this GenAPI, rq string, v interface{}) {
 /* Apparently no PUT or DELETE support in standard library, currently no output */
 func emptyRequest(this GenAPI, method string, rq string) {
   client := &http.Client{}
-  req, err := http.NewRequest("PUT", makeQuery(this, rq), nil)
+  req, err := http.NewRequest(method, makeQuery(this, rq), nil)
   /* TODO error handling */
   resp, err := client.Do(req)
   processResponce(resp, err, nil)

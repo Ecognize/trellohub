@@ -8,6 +8,7 @@ import (
     "io/ioutil"
     "encoding/json"
     "regexp"
+    "strconv"
 )
 
 /* TODO: move to GitHub */
@@ -27,6 +28,8 @@ type TrelloPayload struct {
     Data      struct {
       List    TrelloObject  `json:"list"`
       Card    TrelloObject  `json:"card"`
+      ListB   TrelloObject  `json:"listBefore"`
+      ListA   TrelloObject  `json:"listAfter"`
       Attach  struct {
         URL   string        `json:"url"`
       }                     `json:"attachment"`
@@ -37,7 +40,10 @@ type TrelloPayload struct {
 /* Globals are bad */
 var trello *Trello
 var github *GitHub;
-const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)"
+const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)" // TODO concaputre group
+var cache struct {
+  ListLabels  map[string]string
+}
 
 func main() {
   /* Check if we are run to [re]-initialise the board */
@@ -75,7 +81,10 @@ func main() {
     trello_key, trello_token := os.Getenv("TRELLO_KEY"), os.Getenv("TRELLO_TOKEN")
     boardid := os.Getenv("BOARD")
     base_url := os.Getenv("URL")
+    github_token := os.Getenv("GITHUB_TOKEN")
+
     trello = NewTrello(trello_key, trello_token, boardid)
+    github = NewGitHub(github_token)
 
     json.Unmarshal([]byte(os.Getenv("LISTS")), &trello.Lists)
 
@@ -96,7 +105,21 @@ func main() {
 
     /* Ensuring Trello hook */
     /* TODO: study if this doesn't cause races */
+    // TODO: ex SIGTERM problem
     go trello.EnsureHook(base_url + "/trello")
+
+    /* Fill the GitHub label names cache */
+    cache.ListLabels = map[string]string {
+      trello.Lists.InboxId: "inbox",
+      trello.Lists.InWorksId: "work",
+      trello.Lists.BlockedId: "block",
+      trello.Lists.ReviewId: "review",
+      trello.Lists.MergedId: "merged",
+      trello.Lists.DeployId: "deploy",
+      trello.Lists.TestId: "test",
+      trello.Lists.AcceptId: "done",
+    }
+    // TODO also make reverse one
 
     /* Starting the server up */
     log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -160,10 +183,33 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
       }
 
       return http.StatusOK, "Attachment processed."
+    } else if event.Action.Type == "updateCard" {
+      /* That's a big class of events, let's concentrate on what we want */
+      if len(event.Action.Data.ListB.Id) > 0 && len(event.Action.Data.ListA.Id) > 0 {
+        /* The card has been moved, check if it has a repo */
+        re := regexp.MustCompile(REGEX_GH_REPO + "/issues/([0-9]*)")
+        if res := re.FindStringSubmatch(trello.FirstLink(event.Action.Data.Card.Id)); res != nil {
+          // TODO cache
+          issue := IssueSpec{ res[2] + "/" + res[3], 0 }
+          issue.iid, _ = strconv.Atoi(res[4])
+
+          /* Remove the label if necessary */
+          if label := cache.ListLabels[event.Action.Data.ListB.Id]; len(label) > 0 {
+              github.DelLabel(issue, label)
+          }
+
+          /* Add the label if necessary */
+          if label := cache.ListLabels[event.Action.Data.ListA.Id]; len(label) > 0 {
+              github.AddLabel(issue, label)
+          }
+
+          return http.StatusOK, "New labels adjusted."
+        }
+      }
     }
 
-    log.Print(string(body[:]))
-    return http.StatusOK, "Erm, hello"
+    // log.Print(string(body[:]))
+    return http.StatusOK, "Erm, hello."
   })
 }
 
