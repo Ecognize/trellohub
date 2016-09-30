@@ -43,6 +43,7 @@ var github *GitHub;
 const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)" // TODO concaputre group
 var cache struct {
   ListLabels  map[string]string
+  LabelLists  map[string]string
 }
 
 func main() {
@@ -119,7 +120,11 @@ func main() {
       trello.Lists.TestId: "test",
       trello.Lists.AcceptId: "done",
     }
-    // TODO also make reverse one
+    /* Reversing */
+    cache.LabelLists = make(map[string]string)
+    for k, v := range cache.ListLabels {
+      cache.LabelLists[v] = k
+    }
 
     /* Starting the server up */
     log.Fatal(http.ListenAndServe(":"+port, nil))
