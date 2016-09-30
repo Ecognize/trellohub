@@ -47,6 +47,7 @@ type TrelloPayload struct {
 /* Globals are bad */
 var trello *Trello
 var github *GitHub;
+var base_url string
 const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)" // TODO concaputre group
 var cache struct {
   ListLabels  map[string]string
@@ -82,13 +83,15 @@ func main() {
     fmt.Println("Set $LISTS to the following value:")
     fmt.Println(string(data[:]))
   } else {
+    // TODO make a config struct
+
     /* General config */
     port := os.Getenv("PORT")
 
     /* Trello config */
     trello_key, trello_token := os.Getenv("TRELLO_KEY"), os.Getenv("TRELLO_TOKEN")
     boardid := os.Getenv("BOARD")
-    base_url := os.Getenv("URL")
+    base_url = os.Getenv("URL")
     github_token := os.Getenv("GITHUB_TOKEN")
 
     trello = NewTrello(trello_key, trello_token, boardid)
@@ -191,6 +194,9 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           } else {
             log.Print("Label already there, not proceeding.")
           }
+
+          /* Installing webhooks if necessary */
+          github.EnsureHook(repoid, base_url)
         }
       }
 

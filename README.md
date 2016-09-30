@@ -32,3 +32,4 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
 - More docu
 - Cache (GitHub's request saving technique)
 - Block incorrect actions (e.g. trying to move a card over repositories, deleting main attachment etc)
+- Extra hook removal

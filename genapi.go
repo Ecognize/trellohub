@@ -72,7 +72,7 @@ func processResponce(resp *http.Response, err error, v interface{}) {
     defer resp.Body.Close()
     body, _ := ioutil.ReadAll(resp.Body)
 
-    if resp.StatusCode != 200 {
+    if resp.StatusCode < 200 || resp.StatusCode > 299 {
       log.Printf("HTTP request returned response %d\n", resp.StatusCode)
       log.Fatalln(string(body[:]))
     } else if v != nil {

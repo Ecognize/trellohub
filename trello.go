@@ -143,7 +143,7 @@ func (this *Trello) AddLabel(name string) string {
     "idBoard": { this.BoardId },
     "color": { col } })
 
-  this.labelCache[name] = data.Id 
+  this.labelCache[name] = data.Id
 
   return data.Id
 }
@@ -201,12 +201,9 @@ func (this *Trello) EnsureHook(callbackURL string) {
   found := false
 
   for _, v := range data {
-    /* Remove a hook if it points to some other URL, but same Model */
+    /* Check if we have a hook for our own URL at same model */
     if v.Model == this.BoardId {
-      if v.URL != callbackURL {
-        log.Printf("Found a hook on a different URL: %s. Removing.", v.URL)
-        GenDEL(this, "/webhooks/" + v.Id)
-      } else {
+      if v.URL == callbackURL {
         log.Print("Hook found, nothing to do here.")
         found = true
         break
