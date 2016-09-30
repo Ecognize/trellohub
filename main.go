@@ -18,7 +18,14 @@ type IssuePayload struct {
     URL   string    `json:"html_url"`
     Title string    `json:"title"`
     Body  string    `json:"body"`
+    Number  int     `json:"number"`
   }                 `json:"issue"`
+  Repo  struct {
+    Spec  string    `json:"full_name"`
+  }                 `json:"repository"`
+  Label struct {
+    Name  string    `json:"name"`
+  }                 `json:"label"`
 }
 
 /* TODO: move to Trello */
@@ -228,28 +235,31 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
 
     /* Guess we have a new issue */
     if issue.Action == "opened" {
-      /* Look up the corresponding label */
+      /* Look up the corresponding trello label */
       if labelid := trello.FindLabel(issue.Issue.URL); len(labelid) > 0 {
         /* Insert the card, attach the issue and label */
         cardid := trello.AddCard(trello.Lists.InboxId, issue.Issue.Title, issue.Issue.Body)
         trello.AttachURL(cardid, issue.Issue.URL)
         trello.SetLabel(cardid, labelid)
-
-        re := regexp.MustCompile(REGEX_GH_REPO + "/issues/([0-9]*)")
-        if res := re.FindStringSubmatch(issue.Issue.URL); res != nil {
-          // TODO cache
-          issue := IssueSpec{ res[2] + "/" + res[3], 0 }
-          issue.iid, _ = strconv.Atoi(res[4])
-          github.AddLabel(issue, "inbox")
-        }
+        github.AddLabel(IssueSpec{issue.Repo.Spec, issue.Issue.Number}, "inbox")
 
         /* Happily report */
         log.Printf("Creating card %s for issue %s\n", cardid, issue.Issue.URL)
         return http.StatusOK, "Got your back, captain."
       } else {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."
+      } // TODO switch
+    } else if issue.Action == "labeled" {
+      /* Check if the label is one that we serve and there is a card for the issue */
+      if listid, cardid := cache.LabelLists[issue.Label.Name], trello.FindCard(IssueSpec{issue.Repo.Spec, issue.Issue.Number});
+        len(listid) > 0 && len(cardid) > 0 {
+        /* If the card is not in that list already, request the move */
+        if curlist := trello.CardList(cardid); curlist != listid {
+          trello.MoveCard(cardid, listid)
+        }
       }
     }
+
     return http.StatusOK, "I can't really process this, but fine."
   })
 }

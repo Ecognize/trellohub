@@ -19,6 +19,8 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
   - On GitHub assigns the "inbox" label to the issue
 - Card moved between the lists
   - Changes the corresponding label provided the card was moved between lists in service
+- Issue labelled on GitHub with a label of the list
+  - Moves the card corresponding to the issue to the list corresponding to the label
 
 
 # Far Horizon
