@@ -202,9 +202,9 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
     event := TrelloPayload{}
     json.Unmarshal(body, &event)
 
-    /* TODO: switch */
-    if event.Action.Type == "addAttachmentToCard" {
-      // TODO: also install GitHub webhooks when possible
+    /* Determining which action happened */
+    switch (event.Action.Type) {
+    case "addAttachmentToCard":
       /* Check if the list is correct */
       if trello.CardList(event.Action.Data.Card.Id) == trello.Lists.ReposId {
         /* Check if this is a GitHub URL after all */
@@ -224,9 +224,9 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           github.EnsureHook(repoid, config.BaseURL)
         }
       }
-
       return http.StatusOK, "Attachment processed."
-    } else if event.Action.Type == "updateCard" {
+
+    case "updateCard":
       /* That's a big class of events, let's concentrate on what we want */
       if len(event.Action.Data.ListB.Id) > 0 && len(event.Action.Data.ListA.Id) > 0 {
         /* The card has been moved, check if it has a repo */
@@ -265,7 +265,8 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
     json.Unmarshal(body, &issue)
 
     /* Guess we have a new issue */
-    if issue.Action == "opened" {
+    switch (issue.Action) {
+    case "opened":
       /* Look up the corresponding trello label */
       if labelid := trello.FindLabel(issue.Issue.URL); len(labelid) > 0 {
         /* Insert the card, attach the issue and label */
@@ -279,8 +280,9 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         return http.StatusOK, "Got your back, captain."
       } else {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."
-      } // TODO switch
-    } else if issue.Action == "labeled" {
+      }
+
+    case "labeled":
       /* Check if the label is one that we serve and there is a card for the issue */
       if listid, cardid := cache.LabelLists[issue.Label.Name], trello.FindCard(IssueSpec{issue.Repo.Spec, issue.Issue.Number});
         len(listid) > 0 && len(cardid) > 0 {
