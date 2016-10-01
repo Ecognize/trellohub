@@ -23,6 +23,9 @@ type IssuePayload struct {
   Repo  struct {
     Spec  string    `json:"full_name"`
   }                 `json:"repository"`
+  Assignee struct {
+    Login string    `json:"login"`
+  }                 `json:"assignee"`
   Label struct {
     Name  string    `json:"name"`
   }                 `json:"label"`
@@ -289,7 +292,36 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         /* If the card is not in that list already, request the move */
         if curlist := trello.CardList(cardid); curlist != listid {
           trello.MoveCard(cardid, listid)
+          return http.StatusOK, "Understood, moving card."
+        } else {
+          return http.StatusOK, "The card was already there but thank you."
         }
+      } else if len(cardid) <= 0 {
+        return http.StatusNotFound, "Can't find a corresponding card, probably it was created before we started serving this repo."
+      }
+
+
+    case "assigned", "unassigned":
+      /* Find the card and the user */
+      if tuser, cardid := cache.GitHub2Trello[issue.Assignee.Login], trello.FindCard(IssueSpec{issue.Repo.Spec, issue.Issue.Number});
+        len(tuser) > 0 && len(cardid) > 0 {
+        /* Determine mode of operation */
+        assign, user_there := issue.Action[0] != 'u', trello.UserAssigned(tuser, cardid)
+
+        /* Check if the user is already assigned there, to prevent WebAPI recursion */
+        if (assign && !user_there) || (!assign && user_there)  {
+          if (assign) {
+            trello.AssignUser(tuser, cardid)
+          } else {
+            trello.UnassignUser(tuser, cardid)
+          }
+          return http.StatusOK, "Card users updated."
+        } else {
+          return http.StatusOK, "Well I already know this anyway."
+        }
+      /* Something's wrong */
+      } else {
+        return http.StatusNotFound, "Either this user is not one of us, or the card is nowhere to be found. I dunno man."
       }
     }
 

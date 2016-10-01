@@ -27,6 +27,7 @@ type Trello struct {
   BoardId string
   Lists ListRef
   labelCache map[string]string
+  userCache map[string]string
 }
 
 func NewTrello(key string, token string, boardid string) *Trello {
@@ -35,9 +36,13 @@ func NewTrello(key string, token string, boardid string) *Trello {
   t.Key = key
 
   t.BoardId = t.getFullBoardId(boardid)
-  t.labelCache = make(map[string]string)
 
+  t.labelCache = make(map[string]string)
   t.makeLabelCache()
+
+  /* Note: we assume users don't change anyway so we only do this at startup */
+  t.userCache = make(map[string]string)
+  t.makeUserCache()
 
   return t
 }
@@ -56,9 +61,14 @@ type TrelloObject struct {
 }
 
 type webhookInfo struct {
-    Id    string    `json:"id"`
-    Model string    `json:"idModel"`
-    URL   string    `json:"callbackURL"`
+  Id    string    `json:"id"`
+  Model string    `json:"idModel"`
+  URL   string    `json:"callbackURL"`
+}
+
+type trelloUser struct {
+  Name  string    `json:"username"`
+  Id    string    `json:"id"`
 }
 
 func (this *Trello) getFullBoardId(boardid string) string {
@@ -252,4 +262,40 @@ func (this *Trello) FindCard(issue IssueSpec) string {
 
   /* Sorry, no */
   return ""
+}
+
+/* Check if a user is assigned to the card */
+func (this *Trello) UserAssigned(user string, cardid string) bool {
+  var users []trelloUser
+  GenGET(this, "/cards/" + cardid + "/members", &users)
+
+  /* TODO cache this one too */
+  for _, v := range users {
+    if v.Name == user {
+      return true
+    }
+  }
+
+  return false
+}
+
+/* Resolve user names to ids */
+func (this *Trello) makeUserCache() {
+  var members []trelloUser
+  GenGET(this, "/boards/" + this.BoardId + "/members/", &members)
+
+  for _, v := range members {
+    this.userCache[v.Name] = v.Id
+  }
+}
+
+/* Assign/Unassign a user to the card */
+func (this *Trello) AssignUser(user string, cardid string) {
+  log.Printf("Adding user %s to card %s.", user, cardid)
+  GenPOSTForm(this, "/cards/" + cardid + "/idMembers", nil, url.Values{ "value": { this.userCache[user] } })
+}
+
+func (this *Trello) UnassignUser(user string, cardid string) {
+  log.Printf("Removing user %s from card %s.", user, cardid)
+  GenDEL(this, "/cards/" + cardid + "/idMembers/" + this.userCache[user])
 }

@@ -21,6 +21,8 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
   - Changes the corresponding label provided the card was moved between lists in service
 - Issue labelled on GitHub with a label of the list
   - Moves the card corresponding to the issue to the list corresponding to the label
+- User is assigned/unassigned to the issue on GitHub
+  - Assigns/unassigns the same user (using a correspondence table) to the card
 
 
 # Far Horizon
@@ -34,3 +36,4 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
 - Block incorrect actions (e.g. trying to move a card over repositories, deleting main attachment etc)
 - Extra hook removal
 - Overall anti-fragility code
+- Issue2Card cache (seriously come on its 2016)
