@@ -37,3 +37,5 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
 - Extra hook removal
 - Overall anti-fragility code
 - Issue2Card cache (seriously come on its 2016)
+- Sync comments (do we really need it?)
+- Pass by reference and stuff

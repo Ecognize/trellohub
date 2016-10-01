@@ -5,6 +5,7 @@ import (
   "net/url"
   "encoding/json"
   "io/ioutil"
+  "io"
   "bytes"
   "strings"
   "log"
@@ -34,20 +35,27 @@ func GenGET(this GenAPI, rq string, v interface{}) {
 }
 
 /* Apparently no PUT or DELETE support in standard library, currently no output */
-func emptyRequest(this GenAPI, method string, rq string) {
+func genericRequest(this GenAPI, method string, rq string, rdr io.Reader) {
   client := &http.Client{}
-  req, err := http.NewRequest(method, makeQuery(this, rq), nil)
+  req, err := http.NewRequest(method, makeQuery(this, rq), rdr)
   /* TODO error handling */
   resp, err := client.Do(req)
   processResponce(resp, err, nil)
 }
 
 func GenPUT(this GenAPI, rq string) {
-  emptyRequest(this, "PUT", rq)
+  genericRequest(this, "PUT", rq, nil)
 }
 
 func GenDEL(this GenAPI, rq string) {
-  emptyRequest(this, "DELETE", rq)
+  genericRequest(this, "DELETE", rq, nil)
+}
+
+/* Maybe generalise with other JSON func */
+func GenPCHJSON(this GenAPI, rq string, v interface{}) {
+  // TODO JSON errors
+  payload, _ := json.Marshal(&v)
+  genericRequest(this, "PATCH", rq, bytes.NewReader(payload))
 }
 
 /* Pass a map, process structure later */

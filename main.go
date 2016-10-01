@@ -23,9 +23,8 @@ type IssuePayload struct {
   Repo  struct {
     Spec  string    `json:"full_name"`
   }                 `json:"repository"`
-  Assignee struct {
-    Login string    `json:"login"`
-  }                 `json:"assignee"`
+  Assignee GitUser  `json:"assignee"` // TODO deprecated field!
+  Assigs []GitUser  `json:"assignees"`
   Label struct {
     Name  string    `json:"name"`
   }                 `json:"label"`
@@ -36,6 +35,7 @@ type TrelloPayload struct {
   Action      struct {
     Type      string        `json:"type"`
     Data      struct {
+      Member  string        `json:"idMember"`
       List    TrelloObject  `json:"list"`
       Card    TrelloObject  `json:"card"`
       ListB   TrelloObject  `json:"listBefore"`
@@ -67,6 +67,15 @@ var cache struct {
   LabelLists    map[string]string
   Trello2GitHub map[string]string
   GitHub2Trello map[string]string
+}
+
+/* Reverse a dictionary (check if standar exist?) */
+func DicRev(dic map[string]string) map[string]string {
+  res := make(map[string]string)
+  for k, v := range dic {
+    res[v] = k
+  }
+  return res
 }
 
 func GetEnv(varname string) string {
@@ -127,10 +136,7 @@ func main() {
 
     /* Trello to GitHub correspondence, also reversing */
     json.Unmarshal([]byte(GetEnv("USER_TABLE")), &cache.Trello2GitHub)
-    cache.GitHub2Trello = make(map[string]string)
-    for k, v := range cache.Trello2GitHub {
-      cache.GitHub2Trello[v] = k
-    } // TODO find a standard func or make this a function
+    cache.GitHub2Trello = DicRev(cache.Trello2GitHub)
 
     /* Registering handlers */
     http.HandleFunc("/trello", TrelloFunc)
@@ -158,11 +164,7 @@ func main() {
       trello.Lists.TestId: "test",
       trello.Lists.AcceptId: "done",
     }
-    /* Reversing */
-    cache.LabelLists = make(map[string]string)
-    for k, v := range cache.ListLabels {
-      cache.LabelLists[v] = k
-    }
+    cache.LabelLists = DicRev(cache.ListLabels)
 
     /* Starting the server up */
     log.Fatal(http.ListenAndServe(":"+config.Port, nil))
@@ -252,9 +254,53 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           return http.StatusOK, "New labels adjusted."
         }
       }
+
+    case "addMemberToCard", "removeMemberFromCard":
+      /* Check that the user is in the table */
+      if tuser := trello.UserById(event.Action.Data.Member); len(tuser) > 0 {
+        /* TODO: maybe generalise this process */
+        /* TODO: cache! */
+        re := regexp.MustCompile(REGEX_GH_REPO + "/issues/([0-9]*)")
+        if res := re.FindStringSubmatch(trello.FirstLink(event.Action.Data.Card.Id)); res != nil {
+          // TODO cache
+          issue := IssueSpec{ res[2] + "/" + res[3], 0 }
+          issue.iid, _ = strconv.Atoi(res[4])
+          guser := cache.Trello2GitHub[tuser] // assert len()>0
+
+          users := github.UsersAssigned(issue)
+          assign, user_idx := event.Action.Type[0] != 'r', -1
+          for i, v := range users {
+            if v == guser {
+              user_idx = i
+              break
+            }
+          }
+
+          // TODO GH cache
+          if (assign && user_idx < 0) || (!assign && user_idx >= 0)  {
+            if (assign) {
+              users = append(users, guser)
+            } else {
+              /* Evil magic from golang wiki: remove an element w/o order preservation */
+              users[user_idx] = users[len(users) - 1]
+              users = users[:len(users) - 1]
+            }
+            github.ReassignUsers(users, issue)
+            return http.StatusOK, "Issue users updated."
+          } else {
+            return http.StatusOK, "I knew that already."
+          }
+        } else {
+          return http.StatusOK, "No issue to the card, call the cops, I don't care."
+        }
+      } else {
+        return http.StatusNotFound, "Sorry I have no idea who that user is."
+      }
+
+    default:
+      log.Print(string(body[:]))
     }
 
-    // log.Print(string(body[:]))
     return http.StatusOK, "Erm, hello."
   })
 }
@@ -303,7 +349,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
 
     case "assigned", "unassigned":
       /* Find the card and the user */
-      if tuser, cardid := cache.GitHub2Trello[issue.Assignee.Login], trello.FindCard(IssueSpec{issue.Repo.Spec, issue.Issue.Number});
+      if tuser, cardid := cache.GitHub2Trello[issue.Assignee.Name], trello.FindCard(IssueSpec{issue.Repo.Spec, issue.Issue.Number});
         len(tuser) > 0 && len(cardid) > 0 {
         /* Determine mode of operation */
         assign, user_there := issue.Action[0] != 'u', trello.UserAssigned(tuser, cardid)

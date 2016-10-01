@@ -23,6 +23,10 @@ type GitCommit struct {
   }                 `json:"commit"`
 }
 
+type GitUser  struct {
+  Name      string  `json:"login"`
+}
+
 type WebHook struct {
   Name      string    `json:"name"`
   Active    bool      `json:"active"`
@@ -163,4 +167,31 @@ func (this *GitHub) EnsureHook(repoid string, callbackURLbase string) {
       GenPOSTJSON(this, "repos/" + repoid + "/hooks", nil, &wh)
     }
   }
+}
+
+/* Check if a user is assigned to the card */
+func (this *GitHub) UsersAssigned(issue IssueSpec) []string {
+  /* Strangely we can reuse it here */
+  var payload IssuePayload
+  GenGET(this, "repos/" + issue.rid + "/issues/" + strconv.Itoa(issue.iid), &payload)
+
+  /* Populate a string slice */
+  res := make([]string, len(payload.Assigs))
+  for i, v := range payload.Assigs {
+    res[i] = v.Name
+  }
+
+  return res
+}
+
+type userAssignRequest struct {
+  Assigs  []string `json:"assignees"`
+}
+
+/* Assign/Unassign a user to the card */
+func (this *GitHub) ReassignUsers(users []string, issue IssueSpec) {
+  payload := userAssignRequest{users}
+
+  GenPCHJSON(this, "repos/" + issue.rid + "/issues/" + strconv.Itoa(issue.iid), &payload)
+  log.Printf("Issue %s#%d assignees update.", issue.rid, issue.iid)
 }

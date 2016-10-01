@@ -28,6 +28,7 @@ type Trello struct {
   Lists ListRef
   labelCache map[string]string
   userCache map[string]string
+  userIdCache map[string]string
 }
 
 func NewTrello(key string, token string, boardid string) *Trello {
@@ -287,6 +288,14 @@ func (this *Trello) makeUserCache() {
   for _, v := range members {
     this.userCache[v.Name] = v.Id
   }
+
+  /* Generating a reverse one too */
+  this.userIdCache = DicRev(this.userCache)
+}
+
+/* Wrapper around the dictionary not to expose */
+func (this *Trello) UserById(userid string) string {
+  return this.userIdCache[userid]
 }
 
 /* Assign/Unassign a user to the card */
