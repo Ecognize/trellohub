@@ -25,7 +25,7 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
 
 # Far Horizon
 
-- Handle renamings
+- Handle renamings and title updates
 - Handle forced push of pull request data
 - Error reporting
 - Uniform logging
@@ -33,3 +33,4 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
 - Cache (GitHub's request saving technique)
 - Block incorrect actions (e.g. trying to move a card over repositories, deleting main attachment etc)
 - Extra hook removal
+- Overall anti-fragility code

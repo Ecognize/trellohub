@@ -47,18 +47,39 @@ type TrelloPayload struct {
 /* Globals are bad */
 var trello *Trello
 var github *GitHub;
-var base_url string
+var config struct {
+  BaseURL       string
+  BoardId       string
+  TrelloKey     string
+  TrelloToken   string
+  GitHubToken   string
+  Port          string
+  StableBranch  string
+  TestBranch    string
+}
+
 const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)" // TODO concaputre group
 var cache struct {
-  ListLabels  map[string]string
-  LabelLists  map[string]string
+  ListLabels    map[string]string
+  LabelLists    map[string]string
+  Trello2GitHub map[string]string
+  GitHub2Trello map[string]string
+}
+
+func GetEnv(varname string) string {
+  res := os.Getenv(varname)
+  if len(res) <= 0 {
+    log.Fatalf("$%s must be set.", varname)
+  }
+
+  return res
 }
 
 func main() {
   /* Check if we are run to [re]-initialise the board */
   if (len(os.Args) >= 4) {
-    key, token, boardid := os.Args[1], os.Args[2], os.Args[3]
-    trello = NewTrello(key, token, boardid)
+    config.TrelloKey, config.TrelloToken, config.BoardId = os.Args[1], os.Args[2], os.Args[3]
+    trello = NewTrello(config.TrelloKey, config.TrelloToken, config.BoardId)
 
     /* Archive all open lists */
     for _, v := range trello.ListIds() {
@@ -83,26 +104,30 @@ func main() {
     fmt.Println("Set $LISTS to the following value:")
     fmt.Println(string(data[:]))
   } else {
-    // TODO make a config struct
-
-    /* General config */
-    port := os.Getenv("PORT")
+    /* Server configuration */
+    config.BaseURL, config.Port = GetEnv("URL"), GetEnv("PORT")
 
     /* Trello config */
-    trello_key, trello_token := os.Getenv("TRELLO_KEY"), os.Getenv("TRELLO_TOKEN")
-    boardid := os.Getenv("BOARD")
-    base_url = os.Getenv("URL")
-    github_token := os.Getenv("GITHUB_TOKEN")
+    config.TrelloKey, config.TrelloToken = GetEnv("TRELLO_KEY"), GetEnv("TRELLO_TOKEN")
+    config.BoardId = GetEnv("BOARD")
 
-    trello = NewTrello(trello_key, trello_token, boardid)
-    github = NewGitHub(github_token)
+    /* GitHub config */
+    config.GitHubToken = GetEnv("GITHUB_TOKEN")
+    config.StableBranch, config.TestBranch = GetEnv("STABLE_BRANCH"), GetEnv("TEST_BRANCH")
 
-    json.Unmarshal([]byte(os.Getenv("LISTS")), &trello.Lists)
+    /* Instantiating globals */
+    trello = NewTrello(config.TrelloKey, config.TrelloToken, config.BoardId)
+    github = NewGitHub(config.GitHubToken)
 
-    /* TODO extend for other params */
-  	if port == "" {
-  		log.Fatal("$PORT must be set")
-  	}
+    /* List indexes */
+    json.Unmarshal([]byte(GetEnv("LISTS")), &trello.Lists)
+
+    /* Trello to GitHub correspondence, also reversing */
+    json.Unmarshal([]byte(GetEnv("USER_TABLE")), &cache.Trello2GitHub)
+    cache.GitHub2Trello = make(map[string]string)
+    for k, v := range cache.Trello2GitHub {
+      cache.GitHub2Trello[v] = k
+    } // TODO find a standard func or make this a function
 
     /* Registering handlers */
     http.HandleFunc("/trello", TrelloFunc)
@@ -117,7 +142,7 @@ func main() {
     /* Ensuring Trello hook */
     /* TODO: study if this doesn't cause races */
     // TODO: ex SIGTERM problem
-    go trello.EnsureHook(base_url + "/trello")
+    go trello.EnsureHook(config.BaseURL + "/trello")
 
     /* Fill the GitHub label names cache */
     cache.ListLabels = map[string]string {
@@ -137,7 +162,7 @@ func main() {
     }
 
     /* Starting the server up */
-    log.Fatal(http.ListenAndServe(":"+port, nil))
+    log.Fatal(http.ListenAndServe(":"+config.Port, nil))
   }
 }
 
@@ -196,7 +221,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           }
 
           /* Installing webhooks if necessary */
-          github.EnsureHook(repoid, base_url)
+          github.EnsureHook(repoid, config.BaseURL)
         }
       }
 
