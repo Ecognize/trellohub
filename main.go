@@ -100,15 +100,15 @@ func main() {
 
     /* Ugly but effective, creating new lists */
     trello.Lists = ListRef{
-      trello.AddList("Repositories"),
-      trello.AddList("Inbox"),
-      trello.AddList("In Works"),
-      trello.AddList("Blocked"),
-      trello.AddList("Awaiting Review"),
-      trello.AddList("Merged to Mainline"),
-      trello.AddList("Deployed on Test"),
-      trello.AddList("Tested"),
-      trello.AddList("Accepted"),
+      trello.AddList("📋 Repositories"),
+      trello.AddList("📥 Inbox"),
+      trello.AddList("🚧 In Works"),
+      trello.AddList("🚫 Blocked"),
+      trello.AddList("📝 Awaiting Review"),
+      trello.AddList("💾 Merged to Mainline"),
+      trello.AddList("📲 Deployed on Test"),
+      trello.AddList("📱 Tested"),
+      trello.AddList("📤 Accepted"),
     }
 
     /* Happily print the JSON */
