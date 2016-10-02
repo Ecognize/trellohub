@@ -11,6 +11,11 @@ import (
     "strconv"
 )
 
+type checkItem struct {
+  Checked bool
+  Text    string
+}
+
 /* TODO: move to GitHub */
 type IssuePayload struct {
   Action  string    `json:"action"`
@@ -61,7 +66,12 @@ var config struct {
   TestBranch    string
 }
 
-const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)" // TODO concaputre group
+// TODO noncaputre group
+const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)"
+
+// TODO: this ignores nesting, only top level is processed
+// TODO: this might not work well with backslashes
+const REGEX_GH_CHECK string = "(?:^|\\r\\n)- \\[([ x])\\] ([^\\r]*)"
 var cache struct {
   ListLabels    map[string]string
   LabelLists    map[string]string
@@ -318,14 +328,27 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
     case "opened":
       /* Look up the corresponding trello label */
       if labelid := trello.FindLabel(issue.Issue.URL); len(labelid) > 0 {
+        newbody := issue.Issue.Body
+        checkitems := make([]checkItem, 0)
+        re := regexp.MustCompile(REGEX_GH_CHECK)
+        for {
+          catch := re.FindStringSubmatchIndex(newbody);
+          if catch == nil {
+            break
+          }
+          checkitems = append(checkitems, checkItem{ newbody[catch[2]:catch[3]][0] != ' ', newbody[catch[4]:catch[5]]})
+          newbody = newbody[0:catch[0]] + newbody[catch[1]:len(newbody)]
+        }
+        log.Printf("%#v", checkitems)
+
         /* Insert the card, attach the issue and label */
-        cardid := trello.AddCard(trello.Lists.InboxId, issue.Issue.Title, issue.Issue.Body)
-        trello.AttachURL(cardid, issue.Issue.URL)
-        trello.SetLabel(cardid, labelid)
-        github.AddLabel(IssueSpec{issue.Repo.Spec, issue.Issue.Number}, "inbox")
+        // cardid := trello.AddCard(trello.Lists.InboxId, issue.Issue.Title, newbody)
+        // trello.AttachURL(cardid, issue.Issue.URL)
+        // trello.SetLabel(cardid, labelid)
+        // github.AddLabel(IssueSpec{issue.Repo.Spec, issue.Issue.Number}, "inbox")
 
         /* Happily report */
-        log.Printf("Creating card %s for issue %s\n", cardid, issue.Issue.URL)
+        // log.Printf("Creating card %s for issue %s\n", cardid, issue.Issue.URL)
         return http.StatusOK, "Got your back, captain."
       } else {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."
