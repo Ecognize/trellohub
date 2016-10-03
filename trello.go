@@ -308,3 +308,25 @@ func (this *Trello) UnassignUser(user string, cardid string) {
   log.Printf("Removing user %s from card %s.", user, cardid)
   GenDEL(this, "/cards/" + cardid + "/idMembers/" + this.userCache[user])
 }
+
+/* Add a checklist to the card and return the id */
+func (this *Trello) AddChecklist(cardid string) string {
+  log.Printf("Adding a checklist to the card %s.", cardid)
+  data := TrelloObject{}
+  GenPOSTForm(this, "/cards/" + cardid + "/checklists", &data, url.Values{})
+
+  return data.Id;
+}
+
+/* Add an item to the checklist */
+func (this *Trello) AddToCheckList(checklistid string, itm checkItem) {
+  log.Printf("Adding checklist item: %s.", itm.Text)
+  var checkedTxt string
+  if itm.Checked {
+    checkedTxt = "true"
+  } else {
+    checkedTxt = "false"
+  }
+  GenPOSTForm(this, "/checklists/" + checklistid + "/checkItems", nil,
+    url.Values{ "name": { itm.Text }, "checked": { checkedTxt } })
+}

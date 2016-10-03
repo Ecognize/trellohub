@@ -339,16 +339,23 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
           checkitems = append(checkitems, checkItem{ newbody[catch[2]:catch[3]][0] != ' ', newbody[catch[4]:catch[5]]})
           newbody = newbody[0:catch[0]] + newbody[catch[1]:len(newbody)]
         }
-        log.Printf("%#v", checkitems)
 
         /* Insert the card, attach the issue and label */
-        // cardid := trello.AddCard(trello.Lists.InboxId, issue.Issue.Title, newbody)
-        // trello.AttachURL(cardid, issue.Issue.URL)
-        // trello.SetLabel(cardid, labelid)
-        // github.AddLabel(IssueSpec{issue.Repo.Spec, issue.Issue.Number}, "inbox")
+        cardid := trello.AddCard(trello.Lists.InboxId, issue.Issue.Title, newbody)
+        trello.AttachURL(cardid, issue.Issue.URL)
+        trello.SetLabel(cardid, labelid)
+        github.AddLabel(IssueSpec{issue.Repo.Spec, issue.Issue.Number}, "inbox")
+
+        /* Form a checklist */
+        if len(checkitems) > 0 {
+          checkid := trello.AddChecklist(cardid)
+          for _, v := range checkitems {
+            trello.AddToCheckList(checkid, v)
+          }
+        }
 
         /* Happily report */
-        // log.Printf("Creating card %s for issue %s\n", cardid, issue.Issue.URL)
+        log.Printf("Creating card %s for issue %s\n", cardid, issue.Issue.URL)
         return http.StatusOK, "Got your back, captain."
       } else {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."

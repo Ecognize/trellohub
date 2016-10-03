@@ -17,13 +17,13 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
   - Attaches the issue URL to the card
   - Applies the repository label to the card
   - On GitHub assigns the "inbox" label to the issue
+  - If issue text contains a checklist, copies the same checklist over Trello
 - Card moved between the lists
   - Changes the corresponding label provided the card was moved between lists in service
 - Issue labelled on GitHub with a label of the list
   - Moves the card corresponding to the issue to the list corresponding to the label
 - User is assigned/unassigned to the issue on GitHub
   - Assigns/unassigns the same user (using a correspondence table) to the card
-
 
 # Far Horizon
 
