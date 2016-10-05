@@ -24,6 +24,8 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
   - Moves the card corresponding to the issue to the list corresponding to the label
 - User is assigned/unassigned to the issue on GitHub
   - Assigns/unassigns the same user (using a correspondence table) to the card
+- @mention is used in description or checklist at Trello or GitHub
+  - Replaces the @mention with a corresponding username on the linked resource
 
 # Far Horizon
 

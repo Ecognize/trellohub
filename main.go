@@ -72,6 +72,9 @@ const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)"
 // TODO: this ignores nesting, only top level is processed
 // TODO: this might not work well with backslashes
 const REGEX_GH_CHECK string = "(?:^|\\r\\n)- \\[([ x])\\] ([^\\r]*)"
+
+// TODO: possibly separate GH and Trello version
+const REGEX_GH_USER string = "(?i)@([a-z0-9][a-z0-9-]{0,38}[a-z0-9])"
 var cache struct {
   ListLabels    map[string]string
   LabelLists    map[string]string
@@ -95,6 +98,43 @@ func GetEnv(varname string) string {
   }
 
   return res
+}
+
+/* Lua style strsub, replaces all matches of a regexp with what the callback returns
+   Doesn't edit the original string */
+// TODO handle bogus regexps
+type strsub_c func (v []string) string
+func strsub(source string, regtxt string, f strsub_c) string {
+  res := source
+  re := regexp.MustCompile(regtxt)
+  j := 0
+
+  for {
+    catch := re.FindStringSubmatchIndex(res[j:])
+    if catch == nil {
+      break
+    }
+
+  	// TODO proper slices maybe
+  	lc := len(catch)/2
+  	lo := catch[1] - catch[0]
+    par := make([]string, lc)
+    for i := 0; i < lc; i++ {
+      par[i] = res[catch[i*2] + j:catch[i*2+1] + j]
+    }
+    rep := f(par)
+    res = res[:catch[0] + j] + rep + res[catch[1] + j:]
+    j = catch[1] + j - lo + len(rep)
+  }
+  return res
+}
+
+/* Replaces all occurences of @mentions between GitHub and Trello
+   second parameter determines the dictionary */
+func repMentions(text string, dic map[string]string) string {
+  return strsub(text, REGEX_GH_USER, func (v []string) string {
+    return "@"+dic[v[1]]
+  })
 }
 
 func main() {
@@ -328,17 +368,14 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
     case "opened":
       /* Look up the corresponding trello label */
       if labelid := trello.FindLabel(issue.Issue.URL); len(labelid) > 0 {
-        newbody := issue.Issue.Body
+        /* TODO: reuse this for updates */
         checkitems := make([]checkItem, 0)
-        re := regexp.MustCompile(REGEX_GH_CHECK)
-        for {
-          catch := re.FindStringSubmatchIndex(newbody);
-          if catch == nil {
-            break
-          }
-          checkitems = append(checkitems, checkItem{ newbody[catch[2]:catch[3]][0] != ' ', newbody[catch[4]:catch[5]]})
-          newbody = newbody[0:catch[0]] + newbody[catch[1]:len(newbody)]
-        }
+        newbody := strsub(issue.Issue.Body, REGEX_GH_CHECK, func (v []string) string {
+          checkitems = append(checkitems, checkItem{ v[1][0] != ' ', repMentions(v[2], cache.GitHub2Trello) })
+          return ""
+        })
+        /* Separated for readability */
+        newbody = repMentions(newbody, cache.GitHub2Trello)
 
         /* Insert the card, attach the issue and label */
         cardid := trello.AddCard(trello.Lists.InboxId, issue.Issue.Title, newbody)

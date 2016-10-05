@@ -30,6 +30,7 @@ func makeQuery(this GenAPI, rq string) string {
 /* HTTP method funcs basically all do the same, they compose the query and
    try to extract JSON output */
 func GenGET(this GenAPI, rq string, v interface{}) {
+  log.Printf(rq)
   resp, err := http.Get(makeQuery(this, rq))
   processResponce(resp, err, &v)
 }
