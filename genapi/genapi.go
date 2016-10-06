@@ -1,4 +1,4 @@
-package main
+package genapi
 
 import (
   "net/http"
@@ -8,8 +8,57 @@ import (
   "io"
   "bytes"
   "strings"
+  "regexp"
   "log"
 )
+
+// TODO noncaputre group
+const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)"
+
+// TODO: this ignores nesting, only top level is processed
+// TODO: this might not work well with backslashes
+const REGEX_GH_CHECK string = "(?:^|\\r\\n)- \\[([ x])\\] ([^\\r]*)"
+
+// TODO: possibly separate GH and Trello version
+const REGEX_GH_USER string = "(?i)@([a-z0-9][a-z0-9-]{0,38}[a-z0-9])"
+
+/* Reverse a dictionary (check if standar exist?) */
+func DicRev(dic map[string]string) map[string]string {
+  res := make(map[string]string)
+  for k, v := range dic {
+    res[v] = k
+  }
+  return res
+}
+
+/* Lua style strsub, replaces all matches of a regexp with what the callback returns
+   Doesn't edit the original string */
+// TODO handle bogus regexps
+type strsub_c func (v []string) string
+func strsub(source string, regtxt string, f strsub_c) string {
+  res := source
+  re := regexp.MustCompile(regtxt)
+  j := 0
+
+  for {
+    catch := re.FindStringSubmatchIndex(res[j:])
+    if catch == nil {
+      break
+    }
+
+  	// TODO proper slices maybe
+  	lc := len(catch)/2
+  	lo := catch[1] - catch[0]
+    par := make([]string, lc)
+    for i := 0; i < lc; i++ {
+      par[i] = res[catch[i*2] + j:catch[i*2+1] + j]
+    }
+    rep := f(par)
+    res = res[:catch[0] + j] + rep + res[catch[1] + j:]
+    j = catch[1] + j - lo + len(rep)
+  }
+  return res
+}
 
 /* Generalised functions like JSON decoding or lower level http work */
 type GenAPI interface {

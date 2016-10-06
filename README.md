@@ -4,6 +4,9 @@ Microservice for synchronising a Trello-based workflow with GitHub issues.
 # Board Setup
 Activate GitHub power up by yourself because it needs permissions. You can do away without it anyway.
 
+# Note!
+The code is written with least resistance route in mind and doesn't really represent neither good Go practices nor our best effort. We use it internally and only code for what flexibility and error conditions we personally encounter. Use at your own risk.
+
 # Behaviours
 
 - Attachment added to the card in "Repositories List"
@@ -38,6 +41,6 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
 - Block incorrect actions (e.g. trying to move a card over repositories, deleting main attachment etc)
 - Extra hook removal
 - Overall anti-fragility code
-- Issue2Card cache (seriously come on its 2016)
 - Sync comments (do we really need it?)
 - Pass by reference and stuff
+- Treat Trello IDs as large integers maaybe?

@@ -9,12 +9,8 @@ import (
     "encoding/json"
     "regexp"
     "strconv"
+    "./trello/trello"
 )
-
-type checkItem struct {
-  Checked bool
-  Text    string
-}
 
 /* TODO: move to GitHub */
 type IssuePayload struct {
@@ -35,25 +31,8 @@ type IssuePayload struct {
   }                 `json:"label"`
 }
 
-/* TODO: move to Trello */
-type TrelloPayload struct {
-  Action      struct {
-    Type      string        `json:"type"`
-    Data      struct {
-      Member  string        `json:"idMember"`
-      List    TrelloObject  `json:"list"`
-      Card    TrelloObject  `json:"card"`
-      ListB   TrelloObject  `json:"listBefore"`
-      ListA   TrelloObject  `json:"listAfter"`
-      Attach  struct {
-        URL   string        `json:"url"`
-      }                     `json:"attachment"`
-    }                       `json:"data"`
-  }                         `json:"action"`
-}
-
 /* Globals are bad */
-var trello *Trello
+var trello_obj *Trello
 var github *GitHub;
 var config struct {
   BaseURL       string
@@ -66,29 +45,11 @@ var config struct {
   TestBranch    string
 }
 
-// TODO noncaputre group
-const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)"
-
-// TODO: this ignores nesting, only top level is processed
-// TODO: this might not work well with backslashes
-const REGEX_GH_CHECK string = "(?:^|\\r\\n)- \\[([ x])\\] ([^\\r]*)"
-
-// TODO: possibly separate GH and Trello version
-const REGEX_GH_USER string = "(?i)@([a-z0-9][a-z0-9-]{0,38}[a-z0-9])"
 var cache struct {
   ListLabels    map[string]string
   LabelLists    map[string]string
   Trello2GitHub map[string]string
   GitHub2Trello map[string]string
-}
-
-/* Reverse a dictionary (check if standar exist?) */
-func DicRev(dic map[string]string) map[string]string {
-  res := make(map[string]string)
-  for k, v := range dic {
-    res[v] = k
-  }
-  return res
 }
 
 func GetEnv(varname string) string {
@@ -97,35 +58,6 @@ func GetEnv(varname string) string {
     log.Fatalf("$%s must be set.", varname)
   }
 
-  return res
-}
-
-/* Lua style strsub, replaces all matches of a regexp with what the callback returns
-   Doesn't edit the original string */
-// TODO handle bogus regexps
-type strsub_c func (v []string) string
-func strsub(source string, regtxt string, f strsub_c) string {
-  res := source
-  re := regexp.MustCompile(regtxt)
-  j := 0
-
-  for {
-    catch := re.FindStringSubmatchIndex(res[j:])
-    if catch == nil {
-      break
-    }
-
-  	// TODO proper slices maybe
-  	lc := len(catch)/2
-  	lo := catch[1] - catch[0]
-    par := make([]string, lc)
-    for i := 0; i < lc; i++ {
-      par[i] = res[catch[i*2] + j:catch[i*2+1] + j]
-    }
-    rep := f(par)
-    res = res[:catch[0] + j] + rep + res[catch[1] + j:]
-    j = catch[1] + j - lo + len(rep)
-  }
   return res
 }
 
@@ -141,28 +73,28 @@ func main() {
   /* Check if we are run to [re]-initialise the board */
   if (len(os.Args) >= 4) {
     config.TrelloKey, config.TrelloToken, config.BoardId = os.Args[1], os.Args[2], os.Args[3]
-    trello = NewTrello(config.TrelloKey, config.TrelloToken, config.BoardId)
+    trello_obj = trello.New(config.TrelloKey, config.TrelloToken, config.BoardId)
 
     /* Archive all open lists */
-    for _, v := range trello.ListIds() {
-      trello.CloseList(v)
+    for _, v := range trello_obj.ListIds() {
+      trello_obj.CloseList(v)
     }
 
     /* Ugly but effective, creating new lists */
-    trello.Lists = ListRef{
-      trello.AddList("📋 Repositories"),
-      trello.AddList("📥 Inbox"),
-      trello.AddList("🚧 In Works"),
-      trello.AddList("🚫 Blocked"),
-      trello.AddList("📝 Awaiting Review"),
-      trello.AddList("💾 Merged to Mainline"),
-      trello.AddList("📲 Deployed on Test"),
-      trello.AddList("📱 Tested"),
-      trello.AddList("📤 Accepted"),
+    trello_obj.Lists = ListRef{
+      trello_obj.AddList("📋 Repositories"),
+      trello_obj.AddList("📥 Inbox"),
+      trello_obj.AddList("🚧 In Works"),
+      trello_obj.AddList("🚫 Blocked"),
+      trello_obj.AddList("📝 Awaiting Review"),
+      trello_obj.AddList("💾 Merged to Mainline"),
+      trello_obj.AddList("📲 Deployed on Test"),
+      trello_obj.AddList("📱 Tested"),
+      trello_obj.AddList("📤 Accepted"),
     }
 
     /* Happily print the JSON */
-    data, _ := json.Marshal(trello.Lists)
+    data, _ := json.Marshal(trello_obj.Lists)
     fmt.Println("Set $LISTS to the following value:")
     fmt.Println(string(data[:]))
   } else {
@@ -178,11 +110,11 @@ func main() {
     config.StableBranch, config.TestBranch = GetEnv("STABLE_BRANCH"), GetEnv("TEST_BRANCH")
 
     /* Instantiating globals */
-    trello = NewTrello(config.TrelloKey, config.TrelloToken, config.BoardId)
+    trello_obj = trello.New(config.TrelloKey, config.TrelloToken, config.BoardId)
     github = NewGitHub(config.GitHubToken)
 
     /* List indexes */
-    json.Unmarshal([]byte(GetEnv("LISTS")), &trello.Lists)
+    json.Unmarshal([]byte(GetEnv("LISTS")), &trello_obj.Lists)
 
     /* Trello to GitHub correspondence, also reversing */
     json.Unmarshal([]byte(GetEnv("USER_TABLE")), &cache.Trello2GitHub)
@@ -201,18 +133,18 @@ func main() {
     /* Ensuring Trello hook */
     /* TODO: study if this doesn't cause races */
     // TODO: ex SIGTERM problem
-    go trello.EnsureHook(config.BaseURL + "/trello")
+    go trello_obj.EnsureHook(config.BaseURL + "/trello")
 
     /* Fill the GitHub label names cache */
     cache.ListLabels = map[string]string {
-      trello.Lists.InboxId: "inbox",
-      trello.Lists.InWorksId: "work",
-      trello.Lists.BlockedId: "block",
-      trello.Lists.ReviewId: "review",
-      trello.Lists.MergedId: "merged",
-      trello.Lists.DeployId: "deploy",
-      trello.Lists.TestId: "test",
-      trello.Lists.AcceptId: "done",
+      trello_obj.Lists.InboxId: "inbox",
+      trello_obj.Lists.InWorksId: "work",
+      trello_obj.Lists.BlockedId: "block",
+      trello_obj.Lists.ReviewId: "review",
+      trello_obj.Lists.MergedId: "merged",
+      trello_obj.Lists.DeployId: "deploy",
+      trello_obj.Lists.TestId: "test",
+      trello_obj.Lists.AcceptId: "done",
     }
     cache.LabelLists = DicRev(cache.ListLabels)
 
@@ -254,14 +186,14 @@ func GeneralisedProcess(w http.ResponseWriter, r *http.Request, f handleSubrouti
 
 func TrelloFunc(w http.ResponseWriter, r *http.Request) {
   GeneralisedProcess(w, r, func (body []byte) (int, string) {
-    event := TrelloPayload{}
+    event := trello.Payload{}
     json.Unmarshal(body, &event)
 
     /* Determining which action happened */
     switch (event.Action.Type) {
     case "addAttachmentToCard":
       /* Check if the list is correct */
-      if trello.CardList(event.Action.Data.Card.Id) == trello.Lists.ReposId {
+      if trello_obj.CardList(event.Action.Data.Card.Id) == trello_obj.Lists.ReposId {
         /* Check if this is a GitHub URL after all */
         re := regexp.MustCompile(REGEX_GH_REPO)
         if res := re.FindStringSubmatch(event.Action.Data.Attach.URL); res != nil {
@@ -269,8 +201,8 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           log.Printf("Registering new repository: %s.", repoid)
 
           /* Add a label, but make sure no duplicates happen */
-          if trello.GetLabel(repoid) == "" {
-            trello.SetLabel(event.Action.Data.Card.Id, trello.AddLabel(repoid))
+          if trello_obj.GetLabel(repoid) == "" {
+            trello_obj.SetLabel(event.Action.Data.Card.Id, trello_obj.AddLabel(repoid))
           } else {
             log.Print("Label already there, not proceeding.")
           }
@@ -286,7 +218,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
       if len(event.Action.Data.ListB.Id) > 0 && len(event.Action.Data.ListA.Id) > 0 {
         /* The card has been moved, check if it has a repo */
         re := regexp.MustCompile(REGEX_GH_REPO + "/issues/([0-9]*)")
-        if res := re.FindStringSubmatch(trello.FirstLink(event.Action.Data.Card.Id)); res != nil {
+        if res := re.FindStringSubmatch(trello_obj.FirstLink(event.Action.Data.Card.Id)); res != nil {
           // TODO cache
           issue := IssueSpec{ res[2] + "/" + res[3], 0 }
           issue.iid, _ = strconv.Atoi(res[4])
@@ -307,11 +239,11 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
 
     case "addMemberToCard", "removeMemberFromCard":
       /* Check that the user is in the table */
-      if tuser := trello.UserById(event.Action.Data.Member); len(tuser) > 0 {
+      if tuser := trello_obj.UserById(event.Action.Data.Member); len(tuser) > 0 {
         /* TODO: maybe generalise this process */
         /* TODO: cache! */
         re := regexp.MustCompile(REGEX_GH_REPO + "/issues/([0-9]*)")
-        if res := re.FindStringSubmatch(trello.FirstLink(event.Action.Data.Card.Id)); res != nil {
+        if res := re.FindStringSubmatch(trello_obj.FirstLink(event.Action.Data.Card.Id)); res != nil {
           // TODO cache
           issue := IssueSpec{ res[2] + "/" + res[3], 0 }
           issue.iid, _ = strconv.Atoi(res[4])
@@ -367,7 +299,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
     switch (issue.Action) {
     case "opened":
       /* Look up the corresponding trello label */
-      if labelid := trello.FindLabel(issue.Issue.URL); len(labelid) > 0 {
+      if labelid := trello_obj.FindLabel(issue.Issue.URL); len(labelid) > 0 {
         /* TODO: reuse this for updates */
         checkitems := make([]checkItem, 0)
         newbody := strsub(issue.Issue.Body, REGEX_GH_CHECK, func (v []string) string {
@@ -378,16 +310,16 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         newbody = repMentions(newbody, cache.GitHub2Trello)
 
         /* Insert the card, attach the issue and label */
-        cardid := trello.AddCard(trello.Lists.InboxId, issue.Issue.Title, newbody)
-        trello.AttachURL(cardid, issue.Issue.URL)
-        trello.SetLabel(cardid, labelid)
+        cardid := trello_obj.AddCard(trello_obj.Lists.InboxId, issue.Issue.Title, newbody)
+        trello_obj.AttachURL(cardid, issue.Issue.URL)
+        trello_obj.SetLabel(cardid, labelid)
         github.AddLabel(IssueSpec{issue.Repo.Spec, issue.Issue.Number}, "inbox")
 
         /* Form a checklist */
         if len(checkitems) > 0 {
-          checkid := trello.AddChecklist(cardid)
+          checkid := trello_obj.AddChecklist(cardid)
           for _, v := range checkitems {
-            trello.AddToCheckList(checkid, v)
+            trello_obj.AddToCheckList(checkid, v)
           }
         }
 
@@ -400,11 +332,11 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
 
     case "labeled":
       /* Check if the label is one that we serve and there is a card for the issue */
-      if listid, cardid := cache.LabelLists[issue.Label.Name], trello.FindCard(IssueSpec{issue.Repo.Spec, issue.Issue.Number});
+      if listid, cardid := cache.LabelLists[issue.Label.Name], trello_obj.FindCard(IssueSpec{issue.Repo.Spec, issue.Issue.Number});
         len(listid) > 0 && len(cardid) > 0 {
         /* If the card is not in that list already, request the move */
-        if curlist := trello.CardList(cardid); curlist != listid {
-          trello.MoveCard(cardid, listid)
+        if curlist := trello_obj.CardList(cardid); curlist != listid {
+          trello_obj.MoveCard(cardid, listid)
           return http.StatusOK, "Understood, moving card."
         } else {
           return http.StatusOK, "The card was already there but thank you."
@@ -416,17 +348,17 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
 
     case "assigned", "unassigned":
       /* Find the card and the user */
-      if tuser, cardid := cache.GitHub2Trello[issue.Assignee.Name], trello.FindCard(IssueSpec{issue.Repo.Spec, issue.Issue.Number});
+      if tuser, cardid := cache.GitHub2Trello[issue.Assignee.Name], trello_obj.FindCard(IssueSpec{issue.Repo.Spec, issue.Issue.Number});
         len(tuser) > 0 && len(cardid) > 0 {
         /* Determine mode of operation */
-        assign, user_there := issue.Action[0] != 'u', trello.UserAssigned(tuser, cardid)
+        assign, user_there := issue.Action[0] != 'u', trello_obj.UserAssigned(tuser, cardid)
 
         /* Check if the user is already assigned there, to prevent WebAPI recursion */
         if (assign && !user_there) || (!assign && user_there)  {
           if (assign) {
-            trello.AssignUser(tuser, cardid)
+            trello_obj.AssignUser(tuser, cardid)
           } else {
-            trello.UnassignUser(tuser, cardid)
+            trello_obj.UnassignUser(tuser, cardid)
           }
           return http.StatusOK, "Card users updated."
         } else {
