@@ -58,6 +58,7 @@ type Trello struct {
   Key string
   BoardId string
   Lists ListRef
+  github *GitHub
 
   /* RenameThese to make sense */
   labelCache map[string]string
@@ -78,28 +79,32 @@ func New(key string, token string, boardid string) *Trello {
   return t
 }
 
-func (this *Trello) Startup() {
-  this.labelCache = make(map[string]string)
-  this.makeLabelCache()
+func (trello *Trello) Startup(gh *GitHub) {
+  trello.labelCache = make(map[string]string)
+  trello.makeLabelCache()
 
-  /* Note: we assume users don't change anyway so we only do this at startup */
-  this.userCache = make(map[string]string)
-  this.makeUserCache()
+  /* Note: we assume users don't change anyway so we only do trello at startup */
+  trello.userCache = make(map[string]string)
+  trello.makeUserCache()
 
-  // TODO make cardCache
+  trello.cardById = make(map[string]*Card)
+  trello.cardByIssue = make(map[string]*Card)
+  trello.makeCardCache()
+
+  trello.github = gh
 }
 
-func (this *Trello) AuthQuery() string {
-  return "key=" + this.Key + "&token=" + this.Token
+func (trello *Trello) AuthQuery() string {
+  return "key=" + trello.Key + "&token=" + trello.Token
 }
 
-func (this *Trello) BaseURL() string {
+func (trello *Trello) BaseURL() string {
   return "https://api.trello.com/1"
 }
 
-func (this *Trello) getFullBoardId(boardid string) string {
+func (trello *Trello) getFullBoardId(boardid string) string {
   data := Object{}
-  GenGET(this, "/boards/" + boardid, &data)
+  GenGET(trello, "/boards/" + boardid, &data)
   return data.Id
 }
 
@@ -110,15 +115,15 @@ type webhookInfo struct {
 }
 
 /* Checks that a webhook is installed over the board, in case it isn't creates one */
-func (this *Trello) EnsureHook(callbackURL string) {
+func (trello *Trello) EnsureHook(callbackURL string) {
   /* Check if we have a hook already */
   var data []webhookInfo
-  GenGET(this, "/token/" + this.Token + "/webhooks/", &data)
+  GenGET(trello, "/token/" + trello.Token + "/webhooks/", &data)
   found := false
 
   for _, v := range data {
     /* Check if we have a hook for our own URL at same model */
-    if v.Model == this.BoardId {
+    if v.Model == trello.BoardId {
       if v.URL == callbackURL {
         log.Print("Hook found, nothing to do here.")
         found = true
@@ -130,9 +135,9 @@ func (this *Trello) EnsureHook(callbackURL string) {
   /* If not, install one */
   if !found {
     /* TODO: save hook reference and uninstall maybe? */
-    GenPOSTForm(this, "/webhooks/", nil, url.Values{
-      "name": { "trellohub for " + this.BoardId },
-      "idModel": { this.BoardId },
+    GenPOSTForm(trello, "/webhooks/", nil, url.Values{
+      "name": { "trellohub for " + trello.BoardId },
+      "idModel": { trello.BoardId },
       "callbackURL": { callbackURL } })
 
     log.Print("Webhook installed.")

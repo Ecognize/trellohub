@@ -59,7 +59,7 @@ func (trello *Trello) AddCard(listid string, name string, desc string) string {
     "desc": { desc },
     "pos": { "top" } })
 
-  cacheCard(&data)
+  card.cache()
   // TODO if error
 
   return data.id

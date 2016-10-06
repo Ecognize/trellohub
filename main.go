@@ -59,8 +59,8 @@ func main() {
     trello_obj = trello.New(config.TrelloKey, config.TrelloToken, config.BoardId)
 
     /* Archive all open lists */
-    for _, v := range trello_obj.ListIds() {
-      trello_obj.CloseList(v)
+    for _, v := range trello_obj.Lists() {
+      v.Close()
     }
 
     /* Ugly but effective, creating new lists */
@@ -94,8 +94,8 @@ func main() {
 
     /* Instantiating globals */
     trello_obj = trello.New(config.TrelloKey, config.TrelloToken, config.BoardId)
-    trello_obj.Startup()
     github_obj = github.New(config.GitHubToken)
+    trello_obj.Startup(github_obj)
 
     /* List indexes */
     json.Unmarshal([]byte(GetEnv("LISTS")), &trello_obj.Lists)

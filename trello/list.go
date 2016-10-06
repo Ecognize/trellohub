@@ -6,30 +6,35 @@ import (
   "net/url"
 )
 
+type List struct {
+  Object
+  trello *Trello
+}
+
 /* Adds a list to the board with a given name and returns the list id */
-func (this *Trello) AddList(listname string) string {
+func (trello *Trello) AddList(listname string) string {
   data := Object{}
-  GenPOSTForm(this, "/lists/", &data, url.Values{
+  GenPOSTForm(trello, "/lists/", &data, url.Values{
     "name": { listname },
-    "idBoard": { this.BoardId },
+    "idBoard": { trello.BoardId },
     "pos": { "bottom" } })
 
   return data.Id
 }
 
 /* Lists all the open lists on the board */
-func (this *Trello) ListIds() []string {
+func (trello *Trello) Lists() []List {
   var data []Object
-  GenGET(this, "/boards/" + this.BoardId + "/lists/?filter=open", &data)
-  res := make([]string, len(data))
-  for i, v := range data {
-    res[i] = v.Id
+  GenGET(trello, "/boards/" + trello.BoardId + "/lists/?filter=open", &data)
+
+  for i,v := range data {
+    data[i].trello = trello
   }
-  return res
+
+  return data
 }
 
 /* Archive a list */
-func (this *Trello) CloseList(listid string) {
-  GenPUT(this, "/lists/" + listid + "/closed?value=true")
+func (list *List) Close() {
+  GenPUT(list.trello, "/lists/" + list.Id + "/closed?value=true")
 }
-
