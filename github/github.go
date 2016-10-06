@@ -48,11 +48,6 @@ type WebHook struct {
   }                   `json:"config"`
 }
 
-type IssueSpec struct {
-   RepoId   string
-   IssueNo  int
-}
-
 func New(token string) *GitHub {
   t := new(GitHub)
   t.Token = token
@@ -106,4 +101,3 @@ func (this *GitHub) EnsureHook(repoid string, callbackURLbase string) {
     }
   }
 }
-

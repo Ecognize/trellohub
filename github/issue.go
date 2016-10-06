@@ -7,6 +7,24 @@ import (
   "log"
 )
 
+type Issue struct {
+   RepoId   string
+   IssueNo  int
+}
+
+/* Auto-converions to string */
+func (IssueSpec this) genconv(middlepart string) string {
+  return this.RepoId + middlepart + strconv.Itoa(this.IssueNo)
+}
+
+func (IssueSpec this) String() string {
+  return this.genconv("#")
+}
+
+func (IssueSpec this) IssueURL() string {
+  return "https://github.com/" + this.genconv("/issues/")
+}
+
 /* Check if a user is assigned to the card */
 func (this *GitHub) UsersAssigned(issue IssueSpec) []string {
   /* Strangely we can reuse it here */

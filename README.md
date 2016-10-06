@@ -7,6 +7,8 @@ Activate GitHub power up by yourself because it needs permissions. You can do aw
 # Note!
 The code is written with least resistance route in mind and doesn't really represent neither good Go practices nor our best effort. We use it internally and only code for what flexibility and error conditions we personally encounter. Use at your own risk.
 
+Code generally not thread-safe, race conditions possible in case of fast event stream.
+
 # Behaviours
 
 - Attachment added to the card in "Repositories List"

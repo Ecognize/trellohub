@@ -29,10 +29,10 @@ var config struct {
 }
 
 var cache struct {
-  ListLabels    map[string]string
-  LabelLists    map[string]string
-  Trello2GitHub map[string]string
-  GitHub2Trello map[string]string
+  GitLabelByListId    map[string]string
+  ListIdByGitLabel    map[string]string
+  Trello2GitHub       map[string]string
+  GitHub2Trello       map[string]string
 }
 
 func GetEnv(varname string) string {
@@ -120,7 +120,7 @@ func main() {
     go trello_obj.EnsureHook(config.BaseURL + "/trello")
 
     /* Fill the GitHub label names cache */
-    cache.ListLabels = map[string]string {
+    cache.GitLabelByListId = map[string]string {
       trello_obj.Lists.InboxId: "inbox",
       trello_obj.Lists.InWorksId: "work",
       trello_obj.Lists.BlockedId: "block",
@@ -130,7 +130,7 @@ func main() {
       trello_obj.Lists.TestId: "test",
       trello_obj.Lists.AcceptId: "done",
     }
-    cache.LabelLists = DicRev(cache.ListLabels)
+    cache.ListIdByGitLabel = DicRev(cache.GitLabelByListId)
 
     /* Starting the server up */
     log.Fatal(http.ListenAndServe(":"+config.Port, nil))
@@ -177,16 +177,17 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
     switch (event.Action.Type) {
     case "addAttachmentToCard":
       /* Check if the list is correct */
-      if trello_obj.CardList(event.Action.Data.Card.Id) == trello_obj.Lists.ReposId {
+      card := trello_obj.GetCard(event.Action.Data.Card.Id)
+      if card.ListId == trello_obj.Lists.ReposId {
         /* Check if this is a GitHub URL after all */
         re := regexp.MustCompile(REGEX_GH_REPO)
         if res := re.FindStringSubmatch(event.Action.Data.Attach.URL); res != nil {
-          repoid := res[2] + "/" + res[3]
+          repoid := res[1]
           log.Printf("Registering new repository: %s.", repoid)
 
           /* Add a label, but make sure no duplicates happen */
           if trello_obj.GetLabel(repoid) == "" {
-            trello_obj.SetLabel(event.Action.Data.Card.Id, trello_obj.AddLabel(repoid))
+            trello_obj.SetLabel(event.Action.Data.Card.Id, trello_obj.AddLabel(repoid)) // REFACTOR: labels
           } else {
             log.Print("Label already there, not proceeding.")
           }
@@ -194,32 +195,32 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           /* Installing webhooks if necessary */
           github_obj.EnsureHook(repoid, config.BaseURL)
         }
-      }
+      } // TODO do we want to dance with other types of card attachments? e.g. somebody manually adds an issue link
       return http.StatusOK, "Attachment processed."
+      // TODO: process removals and updates
 
     case "updateCard":
       /* That's a big class of events, let's concentrate on what we want */
       if len(event.Action.Data.ListB.Id) > 0 && len(event.Action.Data.ListA.Id) > 0 {
-        /* The card has been moved, check if it has a repo */
-        re := regexp.MustCompile(REGEX_GH_REPO + "/issues/([0-9]*)")
-        if res := re.FindStringSubmatch(trello_obj.FirstLink(event.Action.Data.Card.Id)); res != nil {
-          // TODO cache
-          issue := github.IssueSpec{ res[2] + "/" + res[3], 0 }
-          issue.IssueNo, _ = strconv.Atoi(res[4])
+        /* The card has been moved, check if it has an issue to it */
+        card := trello_obj.GetCard(event.Action.Data.Card.Id)
 
-          /* Remove the label if necessary */
-          if label := cache.ListLabels[event.Action.Data.ListB.Id]; len(label) > 0 {
-              github_obj.DelLabel(issue, label)
+        if card.issue != nil {
+          /* Update labels if necessary */
+          if label := cache.GitLabelByListId[event.Action.Data.ListB.Id]; len(label) > 0 {
+              github_obj.DelLabel(*issue, label) // REFACTOR: pointers to Issue not IssueSpec
           }
-
-          /* Add the label if necessary */
-          if label := cache.ListLabels[event.Action.Data.ListA.Id]; len(label) > 0 {
-              github_obj.AddLabel(issue, label)
+          if label := cache.GitLabelByListId[event.Action.Data.ListA.Id]; len(label) > 0 {
+              github_obj.AddLabel(*issue, label)
           }
-
-          return http.StatusOK, "New labels adjusted."
         }
+
+        card.Moved(event.Action.Data.ListA.Id)
       }
+      // TODO:
+      // - card rename
+      // - card description update
+      return http.StatusOK, "Card update processed."
 
     case "addMemberToCard", "removeMemberFromCard":
       /* Check that the user is in the table */
@@ -229,8 +230,8 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         re := regexp.MustCompile(REGEX_GH_REPO + "/issues/([0-9]*)")
         if res := re.FindStringSubmatch(trello_obj.FirstLink(event.Action.Data.Card.Id)); res != nil {
           // TODO cache
-          issue := github.IssueSpec{ res[2] + "/" + res[3], 0 }
-          issue.IssueNo, _ = strconv.Atoi(res[4])
+          issue := github.IssueSpec{ res[1] + "/" + res[2], 0 }
+          issue.IssueNo, _ = strconv.Atoi(res[3])
           guser := cache.Trello2GitHub[tuser] // assert len()>0
 
           users := github_obj.UsersAssigned(issue)

@@ -6,6 +6,8 @@ import (
   "log"
 )
 
+// TODO: handle error responces from Trello
+
 /* TODO comments */
 type ListRef struct {
   ReposId   string    `json:"repos"`
@@ -17,11 +19,6 @@ type ListRef struct {
   DeployId  string    `json:"deploy"`
   TestId    string    `json:"tested"`
   AcceptId  string    `json:"accept"`
-}
-
-type Object struct {
-  Id      string    `json:"id"`
-  Name    string    `json:"name"`
 }
 
 type CheckItem struct {
@@ -45,15 +42,30 @@ type Payload struct {
   }                         `json:"action"`
 }
 
+/* Cascading types */
+type Id struct {
+  Id      string    `json:"id"`
+}
+
+type Object struct {
+  Id
+  Name    string    `json:"name"`
+}
+
 /* TODO make some fields private */
 type Trello struct {
   Token string
   Key string
   BoardId string
   Lists ListRef
+
+  /* RenameThese to make sense */
   labelCache map[string]string
   userCache map[string]string
   userIdCache map[string]string
+
+  cardById      map[string]*Card
+  cardByIssue   map[string]*Card
 }
 
 func New(key string, token string, boardid string) *Trello {
@@ -73,6 +85,8 @@ func (this *Trello) Startup() {
   /* Note: we assume users don't change anyway so we only do this at startup */
   this.userCache = make(map[string]string)
   this.makeUserCache()
+
+  // TODO make cardCache
 }
 
 func (this *Trello) AuthQuery() string {

@@ -12,8 +12,8 @@ import (
   "log"
 )
 
-// TODO noncaputre group
-const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)"
+const REGEX_GH_REPO string = "^(?:https?://)?github.com/([^/]*/[^/]*)"
+const REGEX_GH_ISSUE string = REGEX_GH_REPO + "/issues/([0-9]*)"
 // TODO: this ignores nesting, only top level is processed
 // TODO: this might not work well with backslashes
 const REGEX_GH_CHECK string = "(?:^|\\r\\n)- \\[([ x])\\] ([^\\r]*)"
