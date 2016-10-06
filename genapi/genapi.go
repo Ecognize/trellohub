@@ -14,13 +14,12 @@ import (
 
 // TODO noncaputre group
 const REGEX_GH_REPO string = "^(https?://)?github.com/([^/]*)/([^/]*)"
-
 // TODO: this ignores nesting, only top level is processed
 // TODO: this might not work well with backslashes
 const REGEX_GH_CHECK string = "(?:^|\\r\\n)- \\[([ x])\\] ([^\\r]*)"
-
 // TODO: possibly separate GH and Trello version
 const REGEX_GH_USER string = "(?i)@([a-z0-9][a-z0-9-]{0,38}[a-z0-9])"
+const REGEX_GH_MAGIC string = "(?i)(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[[:space:]]*([a-z0-9][a-z0-9-]{0,38}[a-z0-9]/[a-z0-9][a-z0-9-]{0,38}[a-z0-9])?#([0-9]*)"
 
 /* Reverse a dictionary (check if standar exist?) */
 func DicRev(dic map[string]string) map[string]string {

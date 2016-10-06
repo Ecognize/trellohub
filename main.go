@@ -12,25 +12,6 @@ import (
     "./trello/trello"
 )
 
-/* TODO: move to GitHub */
-type IssuePayload struct {
-  Action  string    `json:"action"`
-  Issue struct {
-    URL   string    `json:"html_url"`
-    Title string    `json:"title"`
-    Body  string    `json:"body"`
-    Number  int     `json:"number"`
-  }                 `json:"issue"`
-  Repo  struct {
-    Spec  string    `json:"full_name"`
-  }                 `json:"repository"`
-  Assignee GitUser  `json:"assignee"` // TODO deprecated field!
-  Assigs []GitUser  `json:"assignees"`
-  Label struct {
-    Name  string    `json:"name"`
-  }                 `json:"label"`
-}
-
 /* Globals are bad */
 var trello_obj *Trello
 var github *GitHub;
