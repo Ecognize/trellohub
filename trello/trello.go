@@ -6,12 +6,6 @@ import (
   "log"
 )
 
-/* TODO TEMP */
-type IssueSpec struct {
-   rid string
-   iid int
-}
-
 /* TODO comments */
 type ListRef struct {
   ReposId   string    `json:"repos"`

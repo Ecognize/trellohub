@@ -38,11 +38,11 @@ func (this *GitHub) AffectedIssues(pr IssueSpec) []IssueSpec {
 
   /* Fetching commit data for the PR */
   var commits []GitCommit
-  GenGET(this, "repos/" + pr.rid + "/pulls/" + strconv.Itoa(pr.iid) + "/commits", &commits)
+  GenGET(this, "repos/" + pr.RepoId + "/pulls/" + strconv.Itoa(pr.IssueNo) + "/commits", &commits)
 
   /* Parsing messages and finding relevant issues */
   for _, v := range commits {
-    if issues := extractIssueIds(v.Commit.Message, pr.rid); len(issues) > 0 {
+    if issues := extractIssueIds(v.Commit.Message, pr.RepoId); len(issues) > 0 {
       res = append(res, issues...)
     }
   }

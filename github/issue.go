@@ -11,7 +11,7 @@ import (
 func (this *GitHub) UsersAssigned(issue IssueSpec) []string {
   /* Strangely we can reuse it here */
   var payload Payload
-  GenGET(this, "repos/" + issue.rid + "/issues/" + strconv.Itoa(issue.iid), &payload)
+  GenGET(this, "repos/" + issue.RepoId + "/issues/" + strconv.Itoa(issue.IssueNo), &payload)
 
   /* Populate a string slice */
   res := make([]string, len(payload.Assigs))
@@ -30,6 +30,6 @@ type userAssignRequest struct {
 func (this *GitHub) ReassignUsers(users []string, issue IssueSpec) {
   payload := userAssignRequest{users}
 
-  GenPCHJSON(this, "repos/" + issue.rid + "/issues/" + strconv.Itoa(issue.iid), &payload)
-  log.Printf("Issue %s#%d assignees update.", issue.rid, issue.iid)
+  GenPCHJSON(this, "repos/" + issue.RepoId + "/issues/" + strconv.Itoa(issue.IssueNo), &payload)
+  log.Printf("Issue %s#%d assignees update.", issue.RepoId, issue.IssueNo)
 }

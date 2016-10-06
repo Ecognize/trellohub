@@ -49,8 +49,8 @@ type WebHook struct {
 }
 
 type IssueSpec struct {
-   rid string
-   iid int
+   RepoId   string
+   IssueNo  int
 }
 
 func New(token string) *GitHub {

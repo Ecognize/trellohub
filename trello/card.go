@@ -3,6 +3,7 @@ package trello
 
 import (
   . "../genapi"
+  "../github"
   "net/url"
   "log"
   "strconv"
@@ -52,12 +53,12 @@ func (this *Trello) FirstLink(cardid string) string {
 
 /* Find card by Issue. Assuming only one such card exists. */
 // TODO: seriously, implement caching here!
-func (this *Trello) FindCard(issue IssueSpec) string {
+func (this *Trello) FindCard(issue github.IssueSpec) string {
   var data []Object
   GenGET(this, "/boards/" + this.BoardId + "/cards/", &data)
 
   /* Picking the one we need */
-  ref := issue.rid + "/issues/" + strconv.Itoa(issue.iid)
+  ref := issue.RepoId + "/issues/" + strconv.Itoa(issue.IssueNo)
   for _, v := range data {
     if ok, _ := regexp.MatchString(ref, this.FirstLink(v.Id)); ok {
       return v.Id

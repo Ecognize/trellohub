@@ -33,8 +33,8 @@ func DicRev(dic map[string]string) map[string]string {
 /* Lua style strsub, replaces all matches of a regexp with what the callback returns
    Doesn't edit the original string */
 // TODO handle bogus regexps
-type strsub_c func (v []string) string
-func strsub(source string, regtxt string, f strsub_c) string {
+type StrSub_c func (v []string) string
+func StrSub(source string, regtxt string, f StrSub_c) string {
   res := source
   re := regexp.MustCompile(regtxt)
   j := 0

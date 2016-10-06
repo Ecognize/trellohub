@@ -15,7 +15,7 @@ type labelSpec struct {
 // TODO: cache
 func (this *GitHub) HasLabel(issue IssueSpec, label string) bool {
   var oldldbs []labelSpec
-  GenGET(this, "repos/" + issue.rid + "/issues/" + strconv.Itoa(issue.iid) + "/labels", &oldldbs)
+  GenGET(this, "repos/" + issue.RepoId + "/issues/" + strconv.Itoa(issue.IssueNo) + "/labels", &oldldbs)
 
   for _, v := range oldldbs {
     if v.Name == label {
@@ -30,9 +30,9 @@ func (this *GitHub) HasLabel(issue IssueSpec, label string) bool {
 func (this *GitHub) AddLabel(issue IssueSpec, label string) {
   /* Checking if the label isn't there yet to prevent Trello-GitHub recursion */
   if !this.HasLabel(issue, label) {
-    log.Printf("Adding label %s to %s#%d", label, issue.rid, issue.iid)
+    log.Printf("Adding label %s to %s#%d", label, issue.RepoId, issue.IssueNo)
     lbls := [...]string { label }
-    GenPOSTJSON(this, "repos/" + issue.rid + "/issues/" + strconv.Itoa(issue.iid) + "/labels", nil, &lbls)
+    GenPOSTJSON(this, "repos/" + issue.RepoId + "/issues/" + strconv.Itoa(issue.IssueNo) + "/labels", nil, &lbls)
   }
 }
 
@@ -40,7 +40,7 @@ func (this *GitHub) AddLabel(issue IssueSpec, label string) {
 func (this *GitHub) DelLabel(issue IssueSpec, label string) {
   /* Checking if the label is present actually */
   if this.HasLabel(issue, label) {
-    log.Printf("Removing label %s from %s#%d", label, issue.rid, issue.iid)
-    GenDEL(this, "repos/" + issue.rid + "/issues/" + strconv.Itoa(issue.iid) + "/labels/" + label)
+    log.Printf("Removing label %s from %s#%d", label, issue.RepoId, issue.IssueNo)
+    GenDEL(this, "repos/" + issue.RepoId + "/issues/" + strconv.Itoa(issue.IssueNo) + "/labels/" + label)
   }
 }
