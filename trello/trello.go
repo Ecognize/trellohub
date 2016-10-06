@@ -63,14 +63,16 @@ func New(key string, token string, boardid string) *Trello {
 
   t.BoardId = t.getFullBoardId(boardid)
 
-  t.labelCache = make(map[string]string)
-  t.makeLabelCache()
+  return t
+}
+
+func (this *Trello) Startup() {
+  this.labelCache = make(map[string]string)
+  this.makeLabelCache()
 
   /* Note: we assume users don't change anyway so we only do this at startup */
-  t.userCache = make(map[string]string)
-  t.makeUserCache()
-
-  return t
+  this.userCache = make(map[string]string)
+  this.makeUserCache()
 }
 
 func (this *Trello) AuthQuery() string {
@@ -124,5 +126,3 @@ func (this *Trello) EnsureHook(callbackURL string) {
     log.Print("Reusing existing webhook.")
   }
 }
-
-

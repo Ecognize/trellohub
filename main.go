@@ -94,6 +94,7 @@ func main() {
 
     /* Instantiating globals */
     trello_obj = trello.New(config.TrelloKey, config.TrelloToken, config.BoardId)
+    trello_obj.Startup()
     github_obj = github.New(config.GitHubToken)
 
     /* List indexes */
