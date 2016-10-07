@@ -13,9 +13,7 @@ type Payload struct {
     Spec  string    `json:"full_name"`
   }                 `json:"repository"`
   Assignees
-  Label struct {
-    Name  string    `json:"name"`
-  }                 `json:"label"`
+  Label   Label     `json:"label"`
 }
 
 /* Make some fields private maybe */

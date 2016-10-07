@@ -259,7 +259,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
       }
 
     default:
-      log.Print(string(body[:]))
+      //log.Print(string(body[:]))
     }
 
     return http.StatusOK, "Erm, hello."
@@ -309,11 +309,14 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."
       }
 
-    case "labeled":
-      /* Check if the label is one that we serve and there is a card for the issue */
-      issue := github_obj.GetIssue()
-      if listid, card := cache.ListIdByGitLabel[issue.Label.Name], trello_obj.FindCard(payload.Issue);
-        len(listid) > 0 && card != nil {
+    case "labeled","unlabeled":
+      issue := github_obj.GetIssue(payload.Repo.Spec, payload.Issue.IssueNo)
+      label := payload.Label.Name
+      add := payload.Action[0] !='u'
+      issue.Labels[label] = add
+
+      if listid, card := cache.ListIdByGitLabel[label], trello_obj.FindCard(*issue);
+        add && len(listid) > 0 && card != nil {
         /* If the card is not in that list already, request the move */
         if curlist := card.ListId; curlist != listid {
           card.Move(listid)
@@ -325,21 +328,24 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         return http.StatusNotFound, "Can't find a corresponding card, probably it was created before we started serving this repo."
       }
 
-    case "labeled":
-
     case "assigned", "unassigned":
+      issue := github_obj.GetIssue(payload.Repo.Spec, payload.Issue.IssueNo)
+      user := payload.Assignee.Name
+      add := payload.Action[0] !='u'
+      issue.Members[user] = add
+
       /* Find the card and the user */
-      if tuser, cardid := cache.TrelloUserByGitHub[issue.Assignee.Name], trello_obj.FindCard(github.IssueSpec{issue.Repo.Spec, issue.Issue.Number});
+      if tuser, card := cache.TrelloUserByGitHub[issue.Assignee.Name], trello_obj.FindCard(*issue);
         len(tuser) > 0 && len(cardid) > 0 {
         /* Determine mode of operation */
-        assign, user_there := issue.Action[0] != 'u', trello_obj.UserAssigned(tuser, cardid)
+        user_there := card.Members[tuser]
 
         /* Check if the user is already assigned there, to prevent WebAPI recursion */
-        if (assign && !user_there) || (!assign && user_there)  {
-          if (assign) {
-            trello_obj.AssignUser(tuser, cardid)
+        if (add && !user_there) || (!add && user_there)  {
+          if (add) {
+            card.AddUser(tuser)
           } else {
-            trello_obj.UnassignUser(tuser, cardid)
+            card.DelUser(tuser)
           }
           return http.StatusOK, "Card users updated."
         } else {

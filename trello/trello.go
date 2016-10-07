@@ -57,7 +57,7 @@ type Trello struct {
 
   /* RenameThese to make sense */
   labelCache map[string]string
-  userCache map[string]string
+  userIdbyName map[string]string
   userIdCache map[string]string
 
   cardById      map[string]*Card
@@ -79,7 +79,7 @@ func (trello *Trello) Startup(github *github.GitHub) {
   trello.makeLabelCache()
 
   /* Note: we assume users don't change anyway so we only do trello at startup */
-  trello.userCache = make(map[string]string)
+  trello.userIdbyName = make(map[string]string)
   trello.makeUserCache()
 
   trello.cardById = make(map[string]*Card)

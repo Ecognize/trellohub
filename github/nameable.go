@@ -37,12 +37,10 @@ func (set *Set) setNameable(nm []nameable) {
 }
 
 func (issue *Issue) SetLabels(lbls []Label) {
-  issue.Labels = new(Set)
   issue.Labels.setNameable(lbls)
 }
 
 func (issue *Issue) SetMembers(mbmrs []GitUser) {
-  issue.Members = new(Set)
   issue.Members.setNameable(mbmrs)
 }
 

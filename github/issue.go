@@ -38,7 +38,7 @@ func (issue *Issue) ApiURL() string {
   return "repos/" + issue.genconv("/issues/")
 }
 
-/* Places the issue in the lookup cache */
+/* Places the issue in the lookup cache and creates */
 func (issue *Issue) cache() {
   issue.github.issueBySpec[*issue] = issue
 }
@@ -69,6 +69,8 @@ func (github *GitHub) GetIssue(repoid string, issueno int) *Issue {
     res.github = github
   //  res.update() Do we need it ever?
     res.cache()
+    res.Members = new(Set)
+    res.Labels = new(Set)
     return &res
   }
 }

@@ -14,10 +14,10 @@ type Card struct {
   Object
   ListId      string      `json:"idList"`
   Desc        string      `json:"desc"`
-  members     []string
   trello      *Trello
   issue       *github.Issue
   checklist   *Checlist
+  Members     Set
 }
 
 /* Places the card in the cache */
@@ -40,20 +40,20 @@ func (card *Card) update() {
       issuesFound ++;
       if issuesFound > 1 {
         log.Printf("WARNING: Duplicate issue attachments found on card #%s.", card.Id)
+      } else {
+        issueno, _ := strconv.Atoi(res[2])
+        card.LinkIssue(card.trello.github.GetIssue(res[1], issueno))
       }
-
-      issueno, _ := strconv.Atoi(res[2])
-      card.LinkIssue(card.trello.github.GetIssue(res[1], issueno))
     }
   }
 
-  // TODO fetch users
+  card.updateMembers()
 
   // REFACTOR: checklist
 }
 
 /* Adds a card to the list with a given name and returns the card id */
-func (trello *Trello) AddCard(listid string, name string, desc string) string {
+func (trello *Trello) AddCard(listid string, name string, desc string) *Card {
   data := Card{}
   GenPOSTForm(trello, "/cards/", &data, url.Values{
     "name": { name },
@@ -64,13 +64,13 @@ func (trello *Trello) AddCard(listid string, name string, desc string) string {
   card.cache()
   // TODO if error
 
-  return data.id
+  return data
 }
 
 /* Retrieves the card from the server */
 func (trello *Trello) GetCard(cardid string) *Card {
   if card := trello.cardById[cardid]; card == nil {
-    data := Card{ trello: trello, id: cardid }
+    data := Card{ trello: trello, id: cardid, Members: new(Set) }
     data.update()
     data.cache()
     return &data
@@ -105,24 +105,17 @@ func (trello *Trello) makeCardCache() {
   GenGET(trello, "/boards/" + trello.BoardId + "/cards/", &data)
 
   for card := range data {
+    card.trello = trello
     card.update()
     card.cache()
   }
 }
 
-/* Handlers to model update */
-func (card *Card) UpdateName(name string) {
-  card.Name = name
-}
-
-func (card *Card) UpdateDesc(desc string) {
-  card.Desc = desc
-}
-
+/* Attach an Issue link */
 func (card *Card) LinkIssue(issue *github.Issue) {
   if (card.issue != issue) {
-    card.issue = new(github.IssueSpec) // REFACTOR issues in GitHub
     trello.cardByIssue[*issue] = card
+    card.issue = issue
   }
 }
 
