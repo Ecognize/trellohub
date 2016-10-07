@@ -13,12 +13,17 @@ type Issue struct {
   Title     string    `json:"title"`
   Body      string    `json:"body"`
   IssueNo   int       `json:"number"`
+  LabelsDb  []Label   `json:"labels"`
+  Assignees
   github    *GitHub
+
+  Labels    Set
+  Members   Set
 }
 
 /* Auto-converions to string */
 func (issue *Issue) genconv(middlepart string) string {
-  return issue.Repo() + middlepart + strconv.Itoa(issue.IssueNo)
+  return issue.RepoId + middlepart + strconv.Itoa(issue.IssueNo)
 }
 
 func (issue *Issue) String() string {
@@ -31,26 +36,6 @@ func (issue *Issue) IssueURL() string {
 
 func (issue *Issue) ApiURL() string {
   return "repos/" + issue.genconv("/issues/")
-}
-
-/* If the RepoId field is missing then we probably got this issue over the wire,
-   cut the correct part from the HTML url */
-func (issue *Issue) Repo() string {
-  if len(issue.RepoId) <= 0 {
-    re := regexp.MustCompile(REGEX_GH_REPO)
-    if res := re.FindStringSubmatch(issue.URL); res != nil {
-      issue.RepoId = res[1]
-    } else {
-      Log.Fatalf("URL %s is not a GitHub repository, what is happening here?")
-    }
-  }
-  return issue.RepoId
-}
-
-/* Sets the global GitHub object reference and auto-register */
-func (issue *Issue) SetGitHub(github *GitHub) {
-  issue.github = github
-  issue.cache()
 }
 
 /* Places the issue in the lookup cache */
@@ -82,20 +67,8 @@ func (github *GitHub) GetIssue(repoid string, issueno int) *Issue {
     return issue
   } else {
     res.github = github
-    res.update()
+  //  res.update() Do we need it ever?
     res.cache()
     return &res
   }
 }
-
-
-/* Assign/Unassign a user to the card */
-type userAssignRequest struct {
-  Assigs  []string `json:"assignees"`
-}
-func (issue *Issue) ReassignUsers(users []string) {
-  payload := userAssignRequest{users}
-
-  GenPCHJSON(this, issue.ApiURL(), &payload)
-  log.Printf("Issue %s assignees update.", string(issue))
-} // REFACTOR: add/remove maybe?

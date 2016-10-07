@@ -22,6 +22,8 @@ const REGEX_GH_CHECK string = "(?:^|\\r\\n)- \\[([ x])\\] ([^\\r]*)"
 const REGEX_GH_USER string = "(?i)@([a-z0-9][a-z0-9-]{0,38}[a-z0-9])"
 const REGEX_GH_MAGIC string = "(?i)(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[[:space:]]*" + REGEX_GH_OWNREPO + "#([0-9]*)"
 
+type Set map[string]bool
+
 /* Reverse a dictionary (check if standar exist?) */
 func DicRev(dic map[string]string) map[string]string {
   res := make(map[string]string)
@@ -110,10 +112,10 @@ func GenDEL(this GenAPI, rq string) {
 }
 
 /* Maybe generalise with other JSON func */
-func GenPCHJSON(this GenAPI, rq string, v interface{}) {
+func GenDELJSON(this GenAPI, rq string, v interface{}) {
   // TODO JSON errors
   payload, _ := json.Marshal(&v)
-  genericRequest(this, "PATCH", rq, bytes.NewReader(payload))
+  genericRequest(this, "DEL", rq, bytes.NewReader(payload))
 }
 
 /* Pass a map, process structure later */

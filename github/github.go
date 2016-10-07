@@ -25,10 +25,6 @@ type GitCommit struct {
   }                 `json:"commit"`
 }
 
-type GitUser  struct {
-  Name      string  `json:"login"`
-}
-
 type Assignees struct {
   Assignee GitUser  `json:"assignee"` // TODO deprecated field!
   Assigs []GitUser  `json:"assignees"`

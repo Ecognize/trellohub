@@ -46,12 +46,12 @@ func (this *Trello) UserById(userid string) string {
 }
 
 /* Assign/Unassign a user to the card */
-func (this *Trello) AssignUser(user string, cardid string) {
+func (this *Trello) AddUser(user string, cardid string) {
   log.Printf("Adding user %s to card %s.", user, cardid)
   GenPOSTForm(this, "/cards/" + cardid + "/idMembers", nil, url.Values{ "value": { this.userCache[user] } })
 }
 
-func (this *Trello) UnassignUser(user string, cardid string) {
+func (this *Trello) DelUser(user string, cardid string) {
   log.Printf("Removing user %s from card %s.", user, cardid)
   GenDEL(this, "/cards/" + cardid + "/idMembers/" + this.userCache[user])
 }

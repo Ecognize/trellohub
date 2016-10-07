@@ -278,26 +278,32 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
     switch (issue.Action) {
     case "opened":
       /* Look up the corresponding trello label */
-      if labelid := trello_obj.FindLabel(payload.Issue); len(labelid) > 0 {
-        /* Extracting the checklist */
-        payload.Issue.SetGitHub(github_obj)
-        newbody, checkitems = payload.Issue.GetChecklist(cache.TrelloUserByGitHub)
+      if labelid := trello_obj.FindLabel(payload.Repo.Spec); len(labelid) > 0 {
+        /* Generating an in-DB refernce */
+        issue := github_obj.GetIssue(payload.Repo.Spec, payload.Issue.IssueNo)
+        newbody, checkitems = issue.GetChecklist(cache.TrelloUserByGitHub)
 
         /* Insert the card, attach the issue and label */
-        card := trello_obj.AddCard(trello_obj.Lists.InboxId, payload.Issue.Title, newbody)
-        card.AttachIssue(&payload.Issue)
+        card := trello_obj.AddCard(trello_obj.Lists.InboxId, issue.Title, newbody)
+        card.AttachIssue(issue)
         card.SetLabel(labelid)
-        payload.Issue.AddLabel("inbox")
+
+        issue.AddLabel("inbox")
+        issue.SetLabels(payload.Issue.LabelsDb)
+        issue.SetMembers(payload.Issue.Assigs)
+        for k, v := range issue.Members {
+          if v {
+            card.AddUser(cache.TrelloUserByGitHub[k])
+          }
+        }
 
         /* Form a checklist */
         if len(checkitems) > 0 {
           card.UpdateChecklist(checkitems)
         }
 
-        // REFACTOR initial assignees (#14)
-
         /* Happily report */
-        log.Printf("Creating card %s for issue %s\n", card.Id, issue.Issue.URL)
+        log.Printf("Creating card %s for issue %s\n", card.Id, string(issue))
         return http.StatusOK, "Got your back, captain."
       } else {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."
@@ -305,6 +311,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
 
     case "labeled":
       /* Check if the label is one that we serve and there is a card for the issue */
+      issue := github_obj.GetIssue()
       if listid, card := cache.ListIdByGitLabel[issue.Label.Name], trello_obj.FindCard(payload.Issue);
         len(listid) > 0 && card != nil {
         /* If the card is not in that list already, request the move */
@@ -317,6 +324,8 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
       } else if card == nil {
         return http.StatusNotFound, "Can't find a corresponding card, probably it was created before we started serving this repo."
       }
+
+    case "labeled":
 
     case "assigned", "unassigned":
       /* Find the card and the user */
