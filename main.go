@@ -31,8 +31,8 @@ var config struct {
 var cache struct {
   GitLabelByListId    map[string]string
   ListIdByGitLabel    map[string]string
-  Trello2GitHub       map[string]string
-  GitHub2Trello       map[string]string
+  GitHubUserByTrello       map[string]string
+  TrelloUserByGitHub       map[string]string
 }
 
 func GetEnv(varname string) string {
@@ -93,8 +93,8 @@ func main() {
     json.Unmarshal([]byte(GetEnv("LISTS")), &trello_obj.Lists)
 
     /* Trello to GitHub correspondence, also reversing */
-    json.Unmarshal([]byte(GetEnv("USER_TABLE")), &cache.Trello2GitHub)
-    cache.GitHub2Trello = DicRev(cache.Trello2GitHub)
+    json.Unmarshal([]byte(GetEnv("USER_TABLE")), &cache.GitHubUserByTrello)
+    cache.TrelloUserByGitHub = DicRev(cache.GitHubUserByTrello)
 
     /* Registering handlers */
     http.HandleFunc("/trello", TrelloFunc)
@@ -224,7 +224,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           // TODO cache
           issue := github.IssueSpec{ res[1] + "/" + res[2], 0 }
           issue.IssueNo, _ = strconv.Atoi(res[3])
-          guser := cache.Trello2GitHub[tuser] // assert len()>0
+          guser := cache.GitHubUserByTrello[tuser] // assert len()>0
 
           users := github_obj.UsersAssigned(issue)
           assign, user_idx := event.Action.Type[0] != 'r', -1
@@ -279,7 +279,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
       if labelid := trello_obj.FindLabel(payload.Issue); len(labelid) > 0 {
         /* Extracting the checklist */
         payload.Issue.SetGitHub(github_obj)
-        newbody, checkitems = payload.Issue.GetChecklist(cache.GitHub2Trello)
+        newbody, checkitems = payload.Issue.GetChecklist(cache.TrelloUserByGitHub)
 
         /* Insert the card, attach the issue and label */
         card := trello_obj.AddCard(trello_obj.Lists.InboxId, payload.Issue.Title, newbody)
@@ -292,7 +292,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
           card.UpdateChecklist(checkitems)
         }
 
-        // REFACTOR initial assignees
+        // REFACTOR initial assignees (#14)
 
         /* Happily report */
         log.Printf("Creating card %s for issue %s\n", card.Id, issue.Issue.URL)
@@ -303,23 +303,22 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
 
     case "labeled":
       /* Check if the label is one that we serve and there is a card for the issue */
-      if listid, cardid := cache.LabelLists[issue.Label.Name], trello_obj.FindCard(github.IssueSpec{issue.Repo.Spec, issue.Issue.Number});
-        len(listid) > 0 && len(cardid) > 0 {
+      if listid, card := cache.ListIdByGitLabel[issue.Label.Name], trello_obj.FindCard(payload.Issue);
+        len(listid) > 0 && card != nil {
         /* If the card is not in that list already, request the move */
-        if curlist := trello_obj.CardList(cardid); curlist != listid {
-          trello_obj.MoveCard(cardid, listid)
+        if curlist := card.ListId; curlist != listid {
+          card.Move(listid)
           return http.StatusOK, "Understood, moving card."
         } else {
           return http.StatusOK, "The card was already there but thank you."
         }
-      } else if len(cardid) <= 0 {
+      } else if card == nil {
         return http.StatusNotFound, "Can't find a corresponding card, probably it was created before we started serving this repo."
       }
 
-
     case "assigned", "unassigned":
       /* Find the card and the user */
-      if tuser, cardid := cache.GitHub2Trello[issue.Assignee.Name], trello_obj.FindCard(github.IssueSpec{issue.Repo.Spec, issue.Issue.Number});
+      if tuser, cardid := cache.TrelloUserByGitHub[issue.Assignee.Name], trello_obj.FindCard(github.IssueSpec{issue.Repo.Spec, issue.Issue.Number});
         len(tuser) > 0 && len(cardid) > 0 {
         /* Determine mode of operation */
         assign, user_there := issue.Action[0] != 'u', trello_obj.UserAssigned(tuser, cardid)

@@ -95,7 +95,7 @@ func (card *Card) Move(listid string) {
 }
 
 /* Find card by Issue. Assuming only one such card exists. */
-func (trello *Trello) FindCard(issue *github.Issue) *Card {
+func (trello *Trello) FindCard(issue string) *Card {
   return trello.cardByIssue[issue]
 }
 
