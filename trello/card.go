@@ -111,10 +111,6 @@ func (trello *Trello) makeCardCache() {
 }
 
 /* Handlers to model update */
-func (card *Card) UpdateList(listid string) {
-  card.ListId = listid
-}
-
 func (card *Card) UpdateName(name string) {
   card.Name = name
 }

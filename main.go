@@ -196,18 +196,20 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
       if len(event.Action.Data.ListB.Id) > 0 && len(event.Action.Data.ListA.Id) > 0 {
         /* The card has been moved, check if it has an issue to it */
         card := trello_obj.GetCard(event.Action.Data.Card.Id)
+        oldlist := event.Action.Data.ListB.Id
+        newlist := event.Action.Data.ListA.Id
 
-        if card.issue != nil {
+        if card.issue != nil && oldlist != newlist {
           /* Update labels if necessary */
-          if label := cache.GitLabelByListId[event.Action.Data.ListB.Id]; len(label) > 0 {
-              github_obj.DelLabel(*issue, label) // REFACTOR: pointers to Issue not IssueSpec
+          if label := cache.GitLabelByListId[oldlist]; len(label) > 0 {
+            card.issue.DelLabel(label)
           }
-          if label := cache.GitLabelByListId[event.Action.Data.ListA.Id]; len(label) > 0 {
-              github_obj.AddLabel(*issue, label)
+          if label := cache.GitLabelByListId[newlist]; len(label) > 0 {
+            card.issue.AddLabel(label)
           }
         }
 
-        card.UpdateList(event.Action.Data.ListA.Id)
+        card.ListId = event.Action.Data.ListA.Id
       }
       // TODO:
       // - card rename
