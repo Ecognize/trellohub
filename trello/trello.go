@@ -21,11 +21,6 @@ type ListRef struct {
   AcceptId  string    `json:"accept"`
 }
 
-type CheckItem struct {
-  Checked bool
-  Text    string
-}
-
 type Payload struct {
   Action      struct {
     Type      string        `json:"type"`
@@ -79,7 +74,7 @@ func New(key string, token string, boardid string) *Trello {
   return t
 }
 
-func (trello *Trello) Startup(gh *GitHub) {
+func (trello *Trello) Startup(github *github.GitHub) {
   trello.labelCache = make(map[string]string)
   trello.makeLabelCache()
 
@@ -91,7 +86,7 @@ func (trello *Trello) Startup(gh *GitHub) {
   trello.cardByIssue = make(map[string]*Card)
   trello.makeCardCache()
 
-  trello.github = gh
+  trello.github = github
 }
 
 func (trello *Trello) AuthQuery() string {

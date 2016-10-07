@@ -7,17 +7,27 @@ import (
   "net/url"
 )
 
-/* Add a checklist to the card and return the id */
-func (this *Trello) AddChecklist(cardid string) string {
-  log.Printf("Adding a checklist to the card %s.", cardid)
-  data := Object{}
-  GenPOSTForm(this, "/cards/" + cardid + "/checklists", &data, url.Values{})
+type Checklist struct {
+  Object
+  state   []CheckItem
+}
 
-  return data.Id;
+type CheckItem struct {
+  Checked bool
+  Text    string
+}
+
+/* Add a checklist to the card and return the id */
+func (card *Card) addChecklist() *Checklist {
+  log.Printf("Adding a checklist to the card %s.", card.Id)
+  card.checklist = new(Checklist)
+  GenPOSTForm(card.trello, "/cards/" + card.Id + "/checklists", &card.checklist, url.Values{})
+
+  return data.checklist;
 }
 
 /* Add an item to the checklist */
-func (this *Trello) AddToCheckList(checklistid string, itm CheckItem) {
+func (checklist *Checklist) postToCheckList(itm CheckItem) {
   log.Printf("Adding checklist item: %s.", itm.Text)
   var checkedTxt string
   if itm.Checked {
@@ -25,6 +35,19 @@ func (this *Trello) AddToCheckList(checklistid string, itm CheckItem) {
   } else {
     checkedTxt = "false"
   }
-  GenPOSTForm(this, "/checklists/" + checklistid + "/checkItems", nil,
+  GenPOSTForm(trello, "/checklists/" + checklistid + "/checkItems", nil,
     url.Values{ "name": { itm.Text }, "checked": { checkedTxt } })
+}
+
+/* Synchronise the list with incoming information from GitHub */
+func (card *Card) UpdateChecklist(itms []CheckItems) {
+  if card.checklist == nil {
+    card.addChecklist()
+  }
+  // TODO handle edit events merging the lists
+  for _, v := range itms {
+    card.checklist.postToCheckList(v)
+  }
+  // TODO put this on update!
+  card.checklist.state = itms
 }

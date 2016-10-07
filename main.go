@@ -44,14 +44,6 @@ func GetEnv(varname string) string {
   return res
 }
 
-/* Replaces all occurences of @mentions between GitHub and Trello
-   second parameter determines the dictionary */
-func repMentions(text string, dic map[string]string) string {
-  return StrSub(text, REGEX_GH_USER, func (v []string) string {
-    return "@"+dic[v[1]]
-  })
-}
-
 func main() {
   /* Check if we are run to [re]-initialise the board */
   if (len(os.Args) >= 4) {
@@ -215,7 +207,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           }
         }
 
-        card.Moved(event.Action.Data.ListA.Id)
+        card.UpdateList(event.Action.Data.ListA.Id)
       }
       // TODO:
       // - card rename
@@ -277,39 +269,33 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
     /* TODO check json errors */
     /* TODO check it was github who sent it anyway */
     /* TODO check whether we serve this repo */
-    var issue github.Payload
-    json.Unmarshal(body, &issue)
+    var payload github.Payload
+    json.Unmarshal(body, &payload)
 
     /* Guess we have a new issue */
     switch (issue.Action) {
     case "opened":
       /* Look up the corresponding trello label */
-      if labelid := trello_obj.FindLabel(issue.Issue.URL); len(labelid) > 0 {
-        /* TODO: reuse this for updates */
-        checkitems := make([]trello.CheckItem, 0)
-        newbody := StrSub(issue.Issue.Body, REGEX_GH_CHECK, func (v []string) string {
-          checkitems = append(checkitems, trello.CheckItem{ v[1][0] != ' ', repMentions(v[2], cache.GitHub2Trello) })
-          return ""
-        })
-        /* Separated for readability */
-        newbody = repMentions(newbody, cache.GitHub2Trello)
+      if labelid := trello_obj.FindLabel(payload.Issue); len(labelid) > 0 {
+        /* Extracting the checklist */
+        payload.Issue.SetGitHub(github_obj)
+        newbody, checkitems = payload.Issue.GetChecklist(cache.GitHub2Trello)
 
         /* Insert the card, attach the issue and label */
-        cardid := trello_obj.AddCard(trello_obj.Lists.InboxId, issue.Issue.Title, newbody)
-        trello_obj.AttachURL(cardid, issue.Issue.URL)
-        trello_obj.SetLabel(cardid, labelid)
-        github_obj.AddLabel(github.IssueSpec{issue.Repo.Spec, issue.Issue.Number}, "inbox")
+        card := trello_obj.AddCard(trello_obj.Lists.InboxId, payload.Issue.Title, newbody)
+        card.AttachIssue(&payload.Issue)
+        card.SetLabel(labelid)
+        payload.Issue.AddLabel("inbox")
 
         /* Form a checklist */
         if len(checkitems) > 0 {
-          checkid := trello_obj.AddChecklist(cardid)
-          for _, v := range checkitems {
-            trello_obj.AddToCheckList(checkid, v)
-          }
+          card.UpdateChecklist(checkitems)
         }
 
+        // REFACTOR initial assignees
+
         /* Happily report */
-        log.Printf("Creating card %s for issue %s\n", cardid, issue.Issue.URL)
+        log.Printf("Creating card %s for issue %s\n", card.Id, issue.Issue.URL)
         return http.StatusOK, "Got your back, captain."
       } else {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."

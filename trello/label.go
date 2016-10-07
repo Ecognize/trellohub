@@ -33,8 +33,8 @@ func (this *Trello) AddLabel(name string) string {
 }
 
 /* Attach a label to the card */
-func (this *Trello) SetLabel(cardid string, labelid string) {
-    GenPOSTForm(this, "/cards/" + cardid + "/idLabels", nil, url.Values{ "value": { labelid } })
+func (card *Card) SetLabel(labelid string) {
+    GenPOSTForm(this, "/cards/" + card.Id + "/idLabels", nil, url.Values{ "value": { labelid } })
 }
 
 /* Build a repo to label correspondence cache */
@@ -50,10 +50,10 @@ func (this *Trello) makeLabelCache() bool {
 }
 
 /* Get the label id or empty string if not found */
-func (this *Trello) GetLabel(repoid string) string {
+func (trello *Trello) GetLabel(repoid string) string {
   /* Look in cache, if not there retry */
-  for updated := false; !updated; updated = this.makeLabelCache() {
-    if id, ok := this.labelCache[repoid]; ok {
+  for updated := false; !updated; updated = trello.makeLabelCache() {
+    if id, ok := trello.labelCache[repoid]; ok {
       return id
     }
   }
@@ -63,16 +63,16 @@ func (this *Trello) GetLabel(repoid string) string {
 }
 
 /* Looks up a label to corresponding repository, returns an empty string if not found */
-func (this *Trello) FindLabel(addr string) string {
+func (trello *Trello) FindLabel(addr string) string {
   /* Break the incoming string down to just Owner/repo */
   var key string
-  re := regexp.MustCompile(REGEX_GH_REPO)
+  re := regexp.MustCompile(REGEX_GH_OWNREPO)
   if res := re.FindStringSubmatch(addr); res != nil {
-    key = res[2] + "/" + res[3]
+    key = res[1]
   } else {
     log.Fatal("Incoming URL fails GitHubness, what's going on?")
     return ""
   }
 
-  return this.GetLabel(key)
+  return trello.GetLabel(key)
 }

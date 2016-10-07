@@ -16,8 +16,8 @@ type Card struct {
   Desc        string      `json:"desc"`
   members     []string
   trello      *Trello
-  // TODO pointer
   issue       *github.Issue
+  checklist   *Checlist
 }
 
 /* Places the card in the cache */
@@ -48,6 +48,8 @@ func (card *Card) update() {
   }
 
   // TODO fetch users
+
+  // REFACTOR: checklist
 }
 
 /* Adds a card to the list with a given name and returns the card id */
@@ -82,29 +84,14 @@ func (card *Card) attachURL(addr string) {
   // TODO if error
 }
 
-func (card *Card) LinkIssue(issue *github.Issue) {
-  if (card.issue != issue) {
-    card.issue = new(github.IssueSpec) // REFACTOR issues in GitHub
-    trello.cardByIssue[*issue] = card
-  }
-}
-
-func (card *Card) AttachIssue(issue github.IssueSpec) {
+func (card *Card) AttachIssue(issue *github.Issue) {
   card.attachURL(issue.IssueURL())
-  card.LinkIssue(issue)
 }
 
 /* Move a card to the different list */
 func (card *Card) Move(listid string) {
   log.Printf("Moving card %s to list %s.", card.id, listid)
   GenPUT(trello, "/cards/" + card.id + "/idList?value=" + listid)
-
-  card.Moved(listid)
-}
-
-/* Add new list information to the model */
-func (card *Card) Moved(listid string) {
-  card.listId = listid
 }
 
 /* Find card by Issue. Assuming only one such card exists. */
@@ -120,6 +107,26 @@ func (trello *Trello) makeCardCache() {
   for card := range data {
     card.update()
     card.cache()
+  }
+}
+
+/* Handlers to model update */
+func (card *Card) UpdateList(listid string) {
+  card.ListId = listid
+}
+
+func (card *Card) UpdateName(name string) {
+  card.Name = name
+}
+
+func (card *Card) UpdateDesc(desc string) {
+  card.Desc = desc
+}
+
+func (card *Card) LinkIssue(issue *github.Issue) {
+  if (card.issue != issue) {
+    card.issue = new(github.IssueSpec) // REFACTOR issues in GitHub
+    trello.cardByIssue[*issue] = card
   }
 }
 

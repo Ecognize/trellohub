@@ -12,14 +12,15 @@ import (
   "log"
 )
 
-const REGEX_GH_REPO string = "^(?:https?://)?github.com/([^/]*/[^/]*)"
+const REGEX_GH_OWNREPO string = "([a-z0-9][a-z0-9-]{0,38}[a-z0-9]/[a-z0-9][a-z0-9-]{0,38}[a-z0-9])?"
+const REGEX_GH_REPO string = "^(?:https?://)?github.com/" + REGEX_GH_OWNREPO
 const REGEX_GH_ISSUE string = REGEX_GH_REPO + "/issues/([0-9]*)"
 // TODO: this ignores nesting, only top level is processed
 // TODO: this might not work well with backslashes
 const REGEX_GH_CHECK string = "(?:^|\\r\\n)- \\[([ x])\\] ([^\\r]*)"
 // TODO: possibly separate GH and Trello version
 const REGEX_GH_USER string = "(?i)@([a-z0-9][a-z0-9-]{0,38}[a-z0-9])"
-const REGEX_GH_MAGIC string = "(?i)(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[[:space:]]*([a-z0-9][a-z0-9-]{0,38}[a-z0-9]/[a-z0-9][a-z0-9-]{0,38}[a-z0-9])?#([0-9]*)"
+const REGEX_GH_MAGIC string = "(?i)(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[[:space:]]*" + REGEX_GH_OWNREPO + "#([0-9]*)"
 
 /* Reverse a dictionary (check if standar exist?) */
 func DicRev(dic map[string]string) map[string]string {
@@ -57,6 +58,14 @@ func StrSub(source string, regtxt string, f StrSub_c) string {
     j = catch[1] + j - lo + len(rep)
   }
   return res
+}
+
+/* Replaces all occurences of @mentions between GitHub and Trello
+   second parameter determines the dictionary */
+func repMentions(text string, dic map[string]string) string {
+  return StrSub(text, REGEX_GH_USER, func (v []string) string {
+    return "@"+dic[v[1]]
+  })
 }
 
 /* Generalised functions like JSON decoding or lower level http work */

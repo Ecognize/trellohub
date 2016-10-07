@@ -3,28 +3,19 @@ package github
 import (
   "log"
   . "../genapi"
+  "./trello"
 )
 
 type Payload struct {
   Action  string    `json:"action"`
-  Issue struct {
-    URL   string    `json:"html_url"`
-    Title string    `json:"title"`
-    Body  string    `json:"body"`
-    Number  int     `json:"number"`
-  }                 `json:"issue"`
+  Issue   Issue     `json:"issue"`
   Repo  struct {
     Spec  string    `json:"full_name"`
   }                 `json:"repository"`
-  Assignee GitUser  `json:"assignee"` // TODO deprecated field!
-  Assigs []GitUser  `json:"assignees"`
+  Assignees
   Label struct {
     Name  string    `json:"name"`
   }                 `json:"label"`
-}
-
-type GitHub struct {
-  Token     string
 }
 
 /* Make some fields private maybe */
@@ -36,6 +27,11 @@ type GitCommit struct {
 
 type GitUser  struct {
   Name      string  `json:"login"`
+}
+
+type Assignees struct {
+  Assignee GitUser  `json:"assignee"` // TODO deprecated field!
+  Assigs []GitUser  `json:"assignees"`
 }
 
 type WebHook struct {
@@ -55,21 +51,32 @@ func New(token string) *GitHub {
   return t
 }
 
-func (this *GitHub) AuthQuery() string {
-  return "access_token=" + this.Token
+type GitHub struct {
+  Token         string
+  issueBySpec   map[string]*Issue
+  trello        *trello.Trello
 }
 
-func (this *GitHub) BaseURL() string {
+func (github *GitHub) AuthQuery() string {
+  return "access_token=" + github.Token
+}
+
+func (github *GitHub) BaseURL() string {
   return "https://api.github.com/"
+}
+
+func (github *GitHub) Startup(trello *trello.Trello) {
+  github.trello = trello
+  github.issueBySpec = make(map[string]*Issue)
 }
 
 /* Check and install webhooks on a repository */
 // TODO secret
 // TODO don't fail if we don't have access
-func (this *GitHub) EnsureHook(repoid string, callbackURLbase string) {
+func (github *GitHub) EnsureHook(repoid string, callbackURLbase string) {
   /* Retrieving previously installed hooks */
   var hooks []WebHook
-  GenGET(this, "repos/" + repoid + "/hooks", &hooks)
+  GenGET(github, "repos/" + repoid + "/hooks", &hooks)
 
   hookevts := map[string] struct { event string; found bool } {
     "/issues": { "issues", false },
@@ -97,7 +104,7 @@ func (this *GitHub) EnsureHook(repoid string, callbackURLbase string) {
       wh.Config.Type = "json"
       wh.Config.URL = callbackURLbase + k
       log.Printf("Creating a hook for %s at %s", wh.Config.URL, repoid)
-      GenPOSTJSON(this, "repos/" + repoid + "/hooks", nil, &wh)
+      GenPOSTJSON(github, "repos/" + repoid + "/hooks", nil, &wh)
     }
   }
 }
