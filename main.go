@@ -8,7 +8,6 @@ import (
     "io/ioutil"
     "encoding/json"
     "regexp"
-    "strconv"
     . "./genapi"
     "./trello"
     "./github"
@@ -51,7 +50,7 @@ func main() {
     trello_obj = trello.New(config.TrelloKey, config.TrelloToken, config.BoardId)
 
     /* Archive all open lists */
-    for _, v := range trello_obj.Lists() {
+    for _, v := range trello_obj.GetLists() {
       v.Close()
     }
 
@@ -199,13 +198,13 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         oldlist := event.Action.Data.ListB.Id
         newlist := event.Action.Data.ListA.Id
 
-        if card.issue != nil && oldlist != newlist {
+        if card.Issue != nil && oldlist != newlist {
           /* Update labels if necessary */
           if label := cache.GitLabelByListId[oldlist]; len(label) > 0 {
-            card.issue.DelLabel(label)
+            card.Issue.DelLabel(label)
           }
           if label := cache.GitLabelByListId[newlist]; len(label) > 0 {
-            card.issue.AddLabel(label)
+            card.Issue.AddLabel(label)
           }
         }
 
@@ -220,7 +219,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
       card := trello_obj.GetCard(event.Action.Data.Card.Id)
       userid := event.Action.Data.Member
       add := event.Action.Type[0] != 'r'
-      card.Members[user] = add
+      card.Members[userid] = add
 
       /* Check that the user is in the table */
       if tuser := trello_obj.UserById(userid) ; len(tuser) > 0 {
@@ -229,10 +228,10 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           guser := cache.GitHubUserByTrello[tuser] // assert len()>0
           present := issue.Members[guser]
 
-          if (assign && !present) {
+          if (add && !present) {
             issue.AddUser(guser)
             return http.StatusOK, "User added."
-          } else if (!assign && present) {
+          } else if (!add && present) {
             issue.DelUser(guser)
             return http.StatusOK, "User removed."
           }
@@ -260,13 +259,13 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
     json.Unmarshal(body, &payload)
 
     /* Guess we have a new issue */
-    switch (issue.Action) {
+    switch (payload.Action) {
     case "opened":
       /* Look up the corresponding trello label */
-      if labelid := trello_obj.FindLabel(payload.Repo.Spec); len(labelid) > 0 {
+      if labelid := trello_obj.GetLabel(payload.Repo.Spec); len(labelid) > 0 {
         /* Generating an in-DB refernce */
         issue := github_obj.GetIssue(payload.Repo.Spec, payload.Issue.IssueNo)
-        newbody, checkitems = issue.GetChecklist(cache.TrelloUserByGitHub, payload.Issue.Body)
+        newbody, checkitems := issue.GetChecklist(cache.TrelloUserByGitHub, payload.Issue.Body)
 
         /* Insert the card, attach the issue and label */
         card := trello_obj.AddCard(trello_obj.Lists.InboxId, issue.Title, newbody)
@@ -288,7 +287,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         }
 
         /* Happily report */
-        log.Printf("Creating card %s for issue %s\n", card.Id, string(issue))
+        log.Printf("Creating card %s for issue %s\n", card.Id, issue.String())
         return http.StatusOK, "Got your back, captain."
       } else {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."
@@ -300,7 +299,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
       add := payload.Action[0] !='u'
       issue.Labels[label] = add
 
-      if listid, card := cache.ListIdByGitLabel[label], trello_obj.FindCard(*issue);
+      if listid, card := cache.ListIdByGitLabel[label], trello_obj.FindCard(issue.String());
         add && len(listid) > 0 && card != nil {
         /* If the card is not in that list already, request the move */
         if curlist := card.ListId; curlist != listid {
@@ -320,13 +319,13 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
       issue.Members[user] = add
 
       /* Find the card and the user */
-      if tuser, card := cache.TrelloUserByGitHub[issue.Assignee.Name], trello_obj.FindCard(*issue);
-        len(tuser) > 0 && len(cardid) > 0 {
+      if tuser, card := cache.TrelloUserByGitHub[issue.Assignee.Name], trello_obj.FindCard(issue.String());
+        len(tuser) > 0 && len(card.Id) > 0 {
         /* Determine mode of operation */
-        user_there := card.Members[tuser]
+        present := card.Members[trello_obj.UserByName(tuser)]
 
         /* Check if the user is already assigned there, to prevent WebAPI recursion */
-        if (add && !user_there) || (!add && user_there)  {
+        if (add && !present) || (!add && present)  {
           if (add) {
             card.AddUser(tuser)
           } else {

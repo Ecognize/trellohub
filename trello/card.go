@@ -17,9 +17,9 @@ type Card struct {
   ListId      string      `json:"idList"`
   Desc        string      `json:"desc"`
   trello      *Trello
-  issue       *github.Issue
+  Issue       *github.Issue `json:"-"`
   checklist   *Checklist
-  Members     Set
+  Members     Set         `json:"-"`
 }
 
 /* Places the card in the cache */
@@ -116,9 +116,9 @@ func (trello *Trello) makeCardCache() {
 
 /* Attach an Issue link */
 func (card *Card) LinkIssue(issue *github.Issue) {
-  if (card.issue != issue) {
+  if (card.Issue != issue) {
     card.trello.cardByIssue[issue.String()] = card
-    card.issue = issue
+    card.Issue = issue
   }
 }
 
