@@ -2,8 +2,8 @@
 package trello
 
 import (
-  . "../genapi"
-  "../github"
+  . "github.com/ErintLabs/trellohub/genapi"
+  "github.com/ErintLabs/trellohub/github"
   "net/url"
   "log"
   "strconv"

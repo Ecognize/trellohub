@@ -2,7 +2,7 @@
 package trello
 
 import (
-  . "../genapi"
+  . "github.com/ErintLabs/trellohub/genapi"
   "log"
   "net/url"
 )

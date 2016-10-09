@@ -2,7 +2,7 @@ package github
 
 import (
   "log"
-  . "../genapi"
+  . "github.com/ErintLabs/trellohub/genapi"
 )
 
 type Payload struct {

@@ -2,7 +2,7 @@
 package github
 
 //import (
-//  . "../genapi"
+//  . "github.com/ErintLabs/trellohub/genapi"
 //  "strconv"
 //  "regexp"
 //)

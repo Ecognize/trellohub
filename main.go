@@ -8,9 +8,9 @@ import (
     "io/ioutil"
     "encoding/json"
     "regexp"
-    . "./genapi"
-    "./trello"
-    "./github"
+    . "github.com/ErintLabs/trellohub/genapi"
+    "github.com/ErintLabs/trellohub/trello"
+    "github.com/ErintLabs/trellohub/github"
 )
 
 /* Globals are bad */
