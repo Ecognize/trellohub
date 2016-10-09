@@ -4,7 +4,6 @@ package github
 import (
   . "../genapi"
   "strconv"
-  "log"
 )
 
 type Issue struct {
@@ -40,7 +39,7 @@ func (issue *Issue) ApiURL() string {
 
 /* Places the issue in the lookup cache and creates */
 func (issue *Issue) cache() {
-  issue.github.issueBySpec[*issue] = issue
+  issue.github.issueBySpec[issue.String()] = issue
 }
 
 /* Retrieves the issue data from the server */
@@ -50,27 +49,27 @@ func (issue *Issue) update() {
 
 /* Parses body and outputs the actual body and checklists, takes username correspondence table as input */
 // TODO nested checklists (#24)
-func (issue *Issue) GetChecklist(utable map[string]string) string, []trello.CheckItem {
-  checkitems := make([]trello.CheckItem, 0)
-  res := StrSub(issue.Issue.Body, REGEX_GH_CHECK, func (v []string) string {
-    checkitems = append(checkitems, trello.CheckItem{ v[1][0] != ' ', repMentions(v[2], utable) })
+func (issue *Issue) GetChecklist(utable map[string]string, body string) (string, []CheckItem) {
+  checkitems := make([]CheckItem, 0)
+  res := StrSub(body, REGEX_GH_CHECK, func (v []string) string {
+    checkitems = append(checkitems, CheckItem{ v[1][0] != ' ', RepMentions(v[2], utable) })
     return ""
   })
 
-  return repMentions(res, utable), checkitems
+  return RepMentions(res, utable), checkitems
 }
 
 /* Requests a reference to the issue */
 func (github *GitHub) GetIssue(repoid string, issueno int) *Issue {
   res := Issue{ RepoId: repoid, IssueNo: issueno}
-  if issue := github.issueBySpec[string(res)]; issue != nil {
+  if issue := github.issueBySpec[res.String()]; issue != nil {
     return issue
   } else {
     res.github = github
   //  res.update() Do we need it ever?
     res.cache()
-    res.Members = new(Set)
-    res.Labels = new(Set)
+    res.Members = NewSet()
+    res.Labels = NewSet()
     return &res
   }
 }

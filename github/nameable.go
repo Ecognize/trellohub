@@ -4,7 +4,6 @@ package github
 import (
   . "../genapi"
   "log"
-  "strconv"
 )
 
 type Label struct {
@@ -15,45 +14,32 @@ type GitUser  struct {
   Name      string  `json:"login"`
 }
 
-type nameable interface {
-  name() string
-}
-
-func (this *GitUser) name() string {
-  return this.Name
-}
-
-func (this *Label) name() string {
-  return this.Name
-}
-
-func (set *Set) setNameable(nm []nameable) {
-  for k := range set {
-    delete(set, k)
-  }
-  for _, v := range lbls {
-    set[v.name()] = true
-  }
-}
-
 func (issue *Issue) SetLabels(lbls []Label) {
-  issue.Labels.setNameable(lbls)
+  lst := make([]string, len(lbls))
+  for i, v := range lbls {
+    lst[i] = v.Name
+  }
+  issue.Labels.SetNameable(lst)
 }
 
 func (issue *Issue) SetMembers(mbmrs []GitUser) {
-  issue.Members.setNameable(mbmrs)
+  lst := make([]string, len(mbmrs))
+  for i, v := range mbmrs {
+    lst[i] = v.Name
+  }
+  issue.Members.SetNameable(lst)
 }
 
 /* Adds a label to the issue */
 func (issue *Issue) AddLabel(label string) {
-  log.Printf("Adding label %s to %s", label, string(issue))
+  log.Printf("Adding label %s to %s", label, issue.String())
   lbls := [...]string { label }
   GenPOSTJSON(issue.github, issue.ApiURL() + "/labels", nil, &lbls)
 }
 
 /* Removes a label from the issue */
 func (issue *Issue) DelLabel(label string) {
-  log.Printf("Removing label %s from %s", label, string(issue))
+  log.Printf("Removing label %s from %s", label, issue.String())
   GenDEL(issue.github, issue.ApiURL() + "/labels/" + label) // TODO test if 404 would happen to crash us
 }
 
@@ -63,14 +49,14 @@ type userAssignRequest struct {
 }
 
 func (issue *Issue) AddUser(user string) {
-  payload := userAssignRequest{ { user } }
-  GenPOSTJSON(issue.github, issue.ApiURL() + "/assignees", &payload)
-  log.Printf("Added user %s to issue %s.", user, string(issue))
+  payload := userAssignRequest{ []string{ user } }
+  GenPOSTJSON(issue.github, issue.ApiURL() + "/assignees", nil, &payload)
+  log.Printf("Added user %s to issue %s.", user, issue.String())
 }
 
 /* Removes a use from the issue */
 func (issue *Issue) DelUser(user string) {
-  payload := userAssignRequest{ { user } }
+  payload := userAssignRequest{ []string{ user } }
   GenDELJSON(issue.github, issue.ApiURL() + "/assignees", &payload)
-  log.Printf("Removed user %s from issue %s.", user, string(issue))
+  log.Printf("Removed user %s from issue %s.", user, issue.String())
 }

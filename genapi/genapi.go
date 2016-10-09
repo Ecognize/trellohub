@@ -24,6 +24,25 @@ const REGEX_GH_MAGIC string = "(?i)(?:close|closes|closed|fix|fixes|fixed|resolv
 
 type Set map[string]bool
 
+/* Underlying type is reference */
+func NewSet() Set {
+  return *new(Set)
+}
+
+func (set *Set) SetNameable(nm []string) {
+  for k := range *set {
+    delete(*set, k)
+  }
+  for _, v := range nm {
+    (*set)[v] = true
+  }
+}
+
+type CheckItem struct {
+  Checked bool
+  Text    string
+}
+
 /* Reverse a dictionary (check if standar exist?) */
 func DicRev(dic map[string]string) map[string]string {
   res := make(map[string]string)
@@ -64,7 +83,7 @@ func StrSub(source string, regtxt string, f StrSub_c) string {
 
 /* Replaces all occurences of @mentions between GitHub and Trello
    second parameter determines the dictionary */
-func repMentions(text string, dic map[string]string) string {
+func RepMentions(text string, dic map[string]string) string {
   return StrSub(text, REGEX_GH_USER, func (v []string) string {
     return "@"+dic[v[1]]
   })

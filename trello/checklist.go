@@ -12,11 +12,6 @@ type Checklist struct {
   state   []CheckItem
 }
 
-type CheckItem struct {
-  Checked bool
-  Text    string
-}
-
 /* Add a checklist to the card and return the id */
 func (card *Card) addChecklist() *Checklist {
   log.Printf("Adding a checklist to the card %s.", card.Id)

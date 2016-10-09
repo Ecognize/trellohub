@@ -266,7 +266,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
       if labelid := trello_obj.FindLabel(payload.Repo.Spec); len(labelid) > 0 {
         /* Generating an in-DB refernce */
         issue := github_obj.GetIssue(payload.Repo.Spec, payload.Issue.IssueNo)
-        newbody, checkitems = issue.GetChecklist(cache.TrelloUserByGitHub)
+        newbody, checkitems = issue.GetChecklist(cache.TrelloUserByGitHub, payload.Issue.Body)
 
         /* Insert the card, attach the issue and label */
         card := trello_obj.AddCard(trello_obj.Lists.InboxId, issue.Title, newbody)

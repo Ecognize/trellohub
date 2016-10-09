@@ -3,7 +3,6 @@ package github
 import (
   "log"
   . "../genapi"
-  "./trello"
 )
 
 type Payload struct {
@@ -48,7 +47,6 @@ func New(token string) *GitHub {
 type GitHub struct {
   Token         string
   issueBySpec   map[string]*Issue
-  trello        *trello.Trello
 }
 
 func (github *GitHub) AuthQuery() string {
@@ -59,8 +57,7 @@ func (github *GitHub) BaseURL() string {
   return "https://api.github.com/"
 }
 
-func (github *GitHub) Startup(trello *trello.Trello) {
-  github.trello = trello
+func (github *GitHub) Startup() {
   github.issueBySpec = make(map[string]*Issue)
 }
 

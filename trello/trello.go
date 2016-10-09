@@ -53,7 +53,7 @@ type Trello struct {
   Key string
   BoardId string
   Lists ListRef
-  github *GitHub
+  github *github.GitHub
 
   /* RenameThese to make sense */
   labelCache map[string]string
