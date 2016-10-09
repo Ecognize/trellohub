@@ -21,7 +21,7 @@ func (card *Card) updateMembers() {
 
   /* TODO cache this one too */
   for _, v := range users {
-    card.Members[v.Name] = true
+    card.Members[v.Id] = true
   }
 }
 

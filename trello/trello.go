@@ -71,6 +71,8 @@ func New(key string, token string, boardid string) *Trello {
 }
 
 func (trello *Trello) Startup(github *github.GitHub) {
+  trello.github = github
+  
   trello.labelCache = make(map[string]string)
   trello.makeLabelCache()
 
@@ -81,8 +83,6 @@ func (trello *Trello) Startup(github *github.GitHub) {
   trello.cardById = make(map[string]*Card)
   trello.cardByIssue = make(map[string]*Card)
   trello.makeCardCache()
-
-  trello.github = github
 }
 
 func (trello *Trello) AuthQuery() string {

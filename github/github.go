@@ -40,6 +40,7 @@ type WebHook struct {
 func New(token string) *GitHub {
   t := new(GitHub)
   t.Token = token
+  t.issueBySpec = make(map[string]*Issue)
 
   return t
 }
@@ -55,10 +56,6 @@ func (github *GitHub) AuthQuery() string {
 
 func (github *GitHub) BaseURL() string {
   return "https://api.github.com/"
-}
-
-func (github *GitHub) Startup() {
-  github.issueBySpec = make(map[string]*Issue)
 }
 
 /* Check and install webhooks on a repository */

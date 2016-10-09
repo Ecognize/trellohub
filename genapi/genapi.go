@@ -26,7 +26,7 @@ type Set map[string]bool
 
 /* Underlying type is reference */
 func NewSet() Set {
-  return *new(Set)
+  return make(Set)
 }
 
 func (set *Set) SetNameable(nm []string) {
@@ -108,13 +108,14 @@ func makeQuery(this GenAPI, rq string) string {
 /* HTTP method funcs basically all do the same, they compose the query and
    try to extract JSON output */
 func GenGET(this GenAPI, rq string, v interface{}) {
-  log.Printf(rq)
+  log.Printf("=> GET %s", rq)
   resp, err := http.Get(makeQuery(this, rq))
   processResponce(resp, err, &v)
 }
 
 /* Apparently no PUT or DELETE support in standard library, currently no output */
 func genericRequest(this GenAPI, method string, rq string, rdr io.Reader) {
+  log.Printf("=> %s %s", method, rq)
   client := &http.Client{}
   req, err := http.NewRequest(method, makeQuery(this, rq), rdr)
   /* TODO error handling */
@@ -139,12 +140,14 @@ func GenDELJSON(this GenAPI, rq string, v interface{}) {
 
 /* Pass a map, process structure later */
 func GenPOSTForm(this GenAPI, rq string, v interface{}, f url.Values) { // TODO replace url.values with a struct
+  log.Printf("=> POST %s", rq)
   resp, err := http.PostForm(makeQuery(this, rq), f)
 
   processResponce(resp, err, &v)
 }
 
 func GenPOSTJSON(this GenAPI, rq string, v interface{}, f interface{}) {
+  log.Printf("=> POST %s", rq)
   /* TODO check json errors */
   payload, _ := json.Marshal(f)
 
