@@ -179,7 +179,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
 
           /* Add a label, but make sure no duplicates happen */
           if trello_obj.GetLabel(repoid) == "" {
-            trello_obj.SetLabel(event.Action.Data.Card.Id, trello_obj.AddLabel(repoid)) // REFACTOR: labels
+            card.SetLabel(trello_obj.AddLabel(repoid))
           } else {
             log.Print("Label already there, not proceeding.")
           }
@@ -192,10 +192,10 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
       // TODO: process removals and updates
 
     case "updateCard":
+      card := trello_obj.GetCard(event.Action.Data.Card.Id)
       /* That's a big class of events, let's concentrate on what we want */
       if len(event.Action.Data.ListB.Id) > 0 && len(event.Action.Data.ListA.Id) > 0 {
         /* The card has been moved, check if it has an issue to it */
-        card := trello_obj.GetCard(event.Action.Data.Card.Id)
         oldlist := event.Action.Data.ListB.Id
         newlist := event.Action.Data.ListA.Id
 
@@ -217,39 +217,24 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
       return http.StatusOK, "Card update processed."
 
     case "addMemberToCard", "removeMemberFromCard":
+      card := trello_obj.GetCard(event.Action.Data.Card.Id)
+      userid := event.Action.Data.Member
+      add := event.Action.Type[0] != 'r'
+      card.Members[user] = add
+
       /* Check that the user is in the table */
-      if tuser := trello_obj.UserById(event.Action.Data.Member); len(tuser) > 0 {
+      if tuser := trello_obj.UserById(userid) ; len(tuser) > 0 {
         /* TODO: maybe generalise this process */
-        /* TODO: cache! */
-        re := regexp.MustCompile(REGEX_GH_REPO + "/issues/([0-9]*)")
-        if res := re.FindStringSubmatch(trello_obj.FirstLink(event.Action.Data.Card.Id)); res != nil {
-          // TODO cache
-          issue := github.IssueSpec{ res[1] + "/" + res[2], 0 }
-          issue.IssueNo, _ = strconv.Atoi(res[3])
+        if issue := card.Issue; issue != nil {
           guser := cache.GitHubUserByTrello[tuser] // assert len()>0
+          present := issue.Members[guser]
 
-          users := github_obj.UsersAssigned(issue)
-          assign, user_idx := event.Action.Type[0] != 'r', -1
-          for i, v := range users {
-            if v == guser {
-              user_idx = i
-              break
-            }
-          }
-
-          // TODO GH cache
-          if (assign && user_idx < 0) || (!assign && user_idx >= 0)  {
-            if (assign) {
-              users = append(users, guser)
-            } else {
-              /* Evil magic from golang wiki: remove an element w/o order preservation */
-              users[user_idx] = users[len(users) - 1]
-              users = users[:len(users) - 1]
-            }
-            github_obj.ReassignUsers(users, issue)
-            return http.StatusOK, "Issue users updated."
-          } else {
-            return http.StatusOK, "I knew that already."
+          if (assign && !present) {
+            issue.AddUser(guser)
+            return http.StatusOK, "User added."
+          } else if (!assign && present) {
+            issue.DelUser(guser)
+            return http.StatusOK, "User removed."
           }
         } else {
           return http.StatusOK, "No issue to the card, call the cops, I don't care."

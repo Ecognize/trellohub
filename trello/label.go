@@ -51,6 +51,7 @@ func (this *Trello) makeLabelCache() bool {
 
 /* Get the label id or empty string if not found */
 func (trello *Trello) GetLabel(repoid string) string {
+  // TODO monitor label add events instead of refreshing
   /* Look in cache, if not there retry */
   for updated := false; !updated; updated = trello.makeLabelCache() {
     if id, ok := trello.labelCache[repoid]; ok {
@@ -60,19 +61,4 @@ func (trello *Trello) GetLabel(repoid string) string {
 
   /* If we are still there, something's wrong */
   return ""
-}
-
-/* Looks up a label to corresponding repository, returns an empty string if not found */
-func (trello *Trello) FindLabel(addr string) string {
-  /* Break the incoming string down to just Owner/repo */
-  var key string
-  re := regexp.MustCompile(REGEX_GH_OWNREPO)
-  if res := re.FindStringSubmatch(addr); res != nil {
-    key = res[1]
-  } else {
-    log.Fatal("Incoming URL fails GitHubness, what's going on?")
-    return ""
-  }
-
-  return trello.GetLabel(key)
 }

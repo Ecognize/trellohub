@@ -58,7 +58,7 @@ type Trello struct {
   /* RenameThese to make sense */
   labelCache map[string]string
   userIdbyName map[string]string
-  userIdCache map[string]string
+  userNamebyId map[string]string
 
   cardById      map[string]*Card
   cardByIssue   map[string]*Card
