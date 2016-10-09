@@ -15,9 +15,9 @@ type tUser struct {
 /* Check if a user is assigned to the card */
 func (card *Card) updateMembers() {
   var users []tUser
-  GenGET(trello, "/cards/" + card.Id + "/members", &users)
+  GenGET(card.trello, "/cards/" + card.Id + "/members", &users)
 
-  card.Members = new(Set)
+  card.Members = NewSet()
 
   /* TODO cache this one too */
   for _, v := range users {

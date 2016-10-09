@@ -11,18 +11,20 @@ import (
 )
 
 type Card struct {
-  Object
+  // Object TODO cascading
+  Id          string      `json:"id"`
+  Name        string      `json:"name"`
   ListId      string      `json:"idList"`
   Desc        string      `json:"desc"`
   trello      *Trello
   issue       *github.Issue
-  checklist   *Checlist
+  checklist   *Checklist
   Members     Set
 }
 
 /* Places the card in the cache */
 func (card *Card) cache() {
-  card.trello.cardById[card.id] = card
+  card.trello.cardById[card.Id] = card
 }
 
 /* Updates card data from the server */
@@ -32,11 +34,11 @@ func (card *Card) update() {
 
   /* We don't really care to hold attachments array, just check if there is something to link */
   var data []Object
-  GenGET(trello, "/cards/" + card.Id + "/attachments/", &data)
+  GenGET(card.trello, "/cards/" + card.Id + "/attachments/", &data)
   issuesFound := 0
-  for i := range data {
+  for _, v := range data {
     re := regexp.MustCompile(REGEX_GH_ISSUE)
-    if re.FindStringSubmatch(event.Action.Data.Attach.URL); res != nil {
+    if res := re.FindStringSubmatch(v.Name); res != nil {
       issuesFound ++;
       if issuesFound > 1 {
         log.Printf("WARNING: Duplicate issue attachments found on card #%s.", card.Id)
@@ -61,26 +63,27 @@ func (trello *Trello) AddCard(listid string, name string, desc string) *Card {
     "desc": { desc },
     "pos": { "top" } })
 
-  card.cache()
+  data.cache()
   // TODO if error
 
-  return data
+  return &data
 }
 
 /* Retrieves the card from the server */
 func (trello *Trello) GetCard(cardid string) *Card {
   if card := trello.cardById[cardid]; card == nil {
-    data := Card{ trello: trello, id: cardid, Members: new(Set) }
+    data := Card{ trello: trello, Id: cardid, Members: NewSet() }
     data.update()
     data.cache()
     return &data
   } else {
     return card
+  }
 }
 
 /* Attach issues, PRs and commits to the card */
 func (card *Card) attachURL(addr string) {
-  GenPOSTForm(card.trello, "/cards/" + card.id + "/attachments", nil, url.Values{ "url": { addr } })
+  GenPOSTForm(card.trello, "/cards/" + card.Id + "/attachments", nil, url.Values{ "url": { addr } })
   // TODO if error
 }
 
@@ -90,8 +93,8 @@ func (card *Card) AttachIssue(issue *github.Issue) {
 
 /* Move a card to the different list */
 func (card *Card) Move(listid string) {
-  log.Printf("Moving card %s to list %s.", card.id, listid)
-  GenPUT(trello, "/cards/" + card.id + "/idList?value=" + listid)
+  log.Printf("Moving card %s to list %s.", card.Id, listid)
+  GenPUT(card.trello, "/cards/" + card.Id + "/idList?value=" + listid)
 }
 
 /* Find card by Issue. Assuming only one such card exists. */
@@ -104,7 +107,7 @@ func (trello *Trello) makeCardCache() {
   var data []Card
   GenGET(trello, "/boards/" + trello.BoardId + "/cards/", &data)
 
-  for card := range data {
+  for _, card := range data {
     card.trello = trello
     card.update()
     card.cache()
@@ -114,7 +117,7 @@ func (trello *Trello) makeCardCache() {
 /* Attach an Issue link */
 func (card *Card) LinkIssue(issue *github.Issue) {
   if (card.issue != issue) {
-    trello.cardByIssue[*issue] = card
+    card.trello.cardByIssue[issue.String()] = card
     card.issue = issue
   }
 }

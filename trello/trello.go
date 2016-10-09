@@ -2,6 +2,7 @@ package trello
 
 import (
   . "../genapi"
+  "../github"
   "net/url"
   "log"
 )
@@ -37,13 +38,8 @@ type Payload struct {
   }                         `json:"action"`
 }
 
-/* Cascading types */
-type Id struct {
-  Id      string    `json:"id"`
-}
-
 type Object struct {
-  Id
+  Id      string    `json:"id"`
   Name    string    `json:"name"`
 }
 

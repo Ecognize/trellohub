@@ -23,11 +23,11 @@ func (trello *Trello) AddList(listname string) string {
 }
 
 /* Lists all the open lists on the board */
-func (trello *Trello) Lists() []List {
-  var data []Object
+func (trello *Trello) GetLists() []List {
+  var data []List
   GenGET(trello, "/boards/" + trello.BoardId + "/lists/?filter=open", &data)
 
-  for i,v := range data {
+  for i,_ := range data {
     data[i].trello = trello
   }
 
