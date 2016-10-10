@@ -28,6 +28,8 @@ type Payload struct {
     Data      struct {
       Member  string        `json:"idMember"`
       List    Object        `json:"list"`
+      ChList  Checklist     `json:"checklist"`
+      ChItem  CheckItem     `json:"checkItem"`
       Card    Object        `json:"card"`
       ListB   Object        `json:"listBefore"`
       ListA   Object        `json:"listAfter"`
@@ -72,7 +74,7 @@ func New(key string, token string, boardid string) *Trello {
 
 func (trello *Trello) Startup(github *github.GitHub) {
   trello.github = github
-  
+
   trello.labelCache = make(map[string]string)
   trello.makeLabelCache()
 

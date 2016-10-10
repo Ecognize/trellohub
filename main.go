@@ -163,9 +163,10 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
   GeneralisedProcess(w, r, func (body []byte) (int, string) {
     var event trello.Payload
     json.Unmarshal(body, &event)
+    evt := event.Action.Type
 
     /* Determining which action happened */
-    switch (event.Action.Type) {
+    switch (evt) {
     case "addAttachmentToCard":
       /* Check if the list is correct */
       card := trello_obj.GetCard(event.Action.Data.Card.Id)
@@ -218,7 +219,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
     case "addMemberToCard", "removeMemberFromCard":
       card := trello_obj.GetCard(event.Action.Data.Card.Id)
       userid := event.Action.Data.Member
-      add := event.Action.Type[0] != 'r'
+      add := evt[0] != 'r'
       card.Members[userid] = add
 
       /* Check that the user is in the table */
@@ -242,8 +243,40 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         return http.StatusNotFound, "Sorry I have no idea who that user is."
       }
 
+    case "addChecklistToCard", "createCheckItem":
+      card := trello_obj.GetCard(event.Action.Data.Card.Id)
+      /* If card has no issue, drop it */
+      if card.Issue == nil {
+        return http.StatusOK, "Not an issue card."
+      }
+      /* Run event dependent checks */
+      switch (evt) {
+      /* Only interested in first checklist */
+      case "addChecklistToCard":
+        if card.Checklist != nil {
+          return http.StatusOK, "Got a checklist already."
+        }
+      case "createCheckItem":
+        if card.Checklist == nil || card.Checklist.Id != event.Action.Data.ChList.Id {
+          return http.StatusOK, "Not interested in that checklist."
+        }
+      }
+      /* Update the model */
+      switch (evt) {
+      case "addChecklistToCard":
+        card.LinkChecklist(&event.Action.Data.ChList)
+        // TODO: checklists which already have items!
+        return http.StatusOK, "New checklist registered"
+      case "createCheckItem":
+        event.Action.Data.ChItem.FromTrello()
+        card.Checklist.AddToChecklist(event.Action.Data.ChItem)
+      }
+      /* Regenerate the new issue body and update it */
+      log.Printf("Would output %s", RepMentions(card.Desc, cache.GitHubUserByTrello) + card.Checklist.Render(cache.GitHubUserByTrello))
+      return http.StatusOK, "Checklists updated"
+
     default:
-      //log.Print(string(body[:]))
+      log.Print(string(body[:]))
     }
 
     return http.StatusOK, "Erm, hello."

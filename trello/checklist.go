@@ -5,6 +5,7 @@ import (
   . "github.com/ErintLabs/trellohub/genapi"
   "log"
   "net/url"
+  "fmt"
 )
 
 type Checklist struct {
@@ -16,15 +17,20 @@ type Checklist struct {
 /* Add a checklist to the card and return the id */
 func (card *Card) addChecklist() *Checklist {
   log.Printf("Adding a checklist to the card %s.", card.Id)
-  card.checklist = new(Checklist)
-  card.checklist.card = card
-  GenPOSTForm(card.trello, "/cards/" + card.Id + "/checklists", &card.checklist, url.Values{})
+  card.Checklist = new(Checklist)
+  card.Checklist.card = card
+  GenPOSTForm(card.trello, "/cards/" + card.Id + "/checklists", &card.Checklist, url.Values{})
 
-  return card.checklist;
+  return card.Checklist;
+}
+
+func (card *Card) LinkChecklist(checklist *Checklist) {
+  card.Checklist = checklist
+  card.Checklist.card = card
 }
 
 /* Add an item to the checklist */
-func (checklist *Checklist) postToCheckList(itm CheckItem) {
+func (checklist *Checklist) postToChecklist(itm CheckItem) {
   log.Printf("Adding checklist item: %s.", itm.Text)
   var checkedTxt string
   if itm.Checked {
@@ -38,13 +44,34 @@ func (checklist *Checklist) postToCheckList(itm CheckItem) {
 
 /* Synchronise the list with incoming information from GitHub */
 func (card *Card) UpdateChecklist(itms []CheckItem) {
-  if card.checklist == nil {
+  if card.Checklist == nil {
     card.addChecklist()
   }
   // TODO handle edit events merging the lists
   for _, v := range itms {
-    card.checklist.postToCheckList(v)
+    card.Checklist.postToChecklist(v)
   }
   // TODO put this on update!
-  card.checklist.state = itms
+  card.Checklist.state = itms
+}
+
+/* Add an item to checklist */
+func (checklist *Checklist) AddToChecklist(itm CheckItem) {
+  checklist.state = append(checklist.state, itm)
+}
+
+
+/* Renders the checklist into GitHub's Markdown */
+func (checklist *Checklist) Render(table map[string]string) string {
+  res := ""
+  for _, v := range checklist.state {
+    var on byte
+    if (v.Checked) {
+      on = 'X'
+    } else {
+      on = ' '
+    }
+    res = res + fmt.Sprintf("\r\n- [%c] %s", on, v.Text)
+  }
+  return res
 }

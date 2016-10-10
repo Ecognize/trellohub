@@ -39,8 +39,22 @@ func (set *Set) SetNameable(nm []string) {
 }
 
 type CheckItem struct {
-  Checked bool
-  Text    string
+  Checked bool      `json:"-"`
+  Text    string    `json:"name"`
+  Id      string    `json:"id"`
+  State   string    `json:"state"`
+}
+
+func (ch *CheckItem) FromTrello() {
+  ch.Checked = ch.State == "complete"
+}
+
+func (ch *CheckItem) ForTrello() {
+  if (ch.Checked) {
+    ch.State = "complete"
+  } else {
+    ch.State = "incomplete"
+  }
 }
 
 /* Reverse a dictionary (check if standar exist?) */

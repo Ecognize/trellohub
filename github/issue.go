@@ -52,7 +52,7 @@ func (issue *Issue) update() {
 func (issue *Issue) GetChecklist(utable map[string]string, body string) (string, []CheckItem) {
   checkitems := make([]CheckItem, 0)
   res := StrSub(body, REGEX_GH_CHECK, func (v []string) string {
-    checkitems = append(checkitems, CheckItem{ v[1][0] != ' ', RepMentions(v[2], utable) })
+    checkitems = append(checkitems, CheckItem{ Checked: v[1][0] != ' ', Text: RepMentions(v[2], utable) })
     return ""
   })
 

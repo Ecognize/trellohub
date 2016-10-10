@@ -12,14 +12,14 @@ import (
 
 type Card struct {
   // Object TODO cascading
-  Id          string      `json:"id"`
-  Name        string      `json:"name"`
-  ListId      string      `json:"idList"`
-  Desc        string      `json:"desc"`
+  Id          string        `json:"id"`
+  Name        string        `json:"name"`
+  ListId      string        `json:"idList"`
+  Desc        string        `json:"desc"`
   trello      *Trello
   Issue       *github.Issue `json:"-"`
-  checklist   *Checklist
-  Members     Set         `json:"-"`
+  Checklist   *Checklist    `json:"-"`
+  Members     Set           `json:"-"`
 }
 
 /* Places the card in the cache */
