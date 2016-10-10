@@ -353,11 +353,6 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
             }
           }
 
-          /* Form a checklist */
-          if len(checkitems) > 0 {
-            card.UpdateChecklist(checkitems)
-          }
-
           /* Happily report */
           log.Printf("Creating card %s for issue %s\n", card.Id, issue.String())
         } else if payload.Action == "edited" {
@@ -373,6 +368,59 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
             return http.StatusNotFound, "Can't find the card, are we dealing with an old issue?"
           }
         }
+
+        /* If issue is just opened or if it's an edit that might potentially add a checklist, try forming it */
+        if payload.Action == "opened" || card.Checklist == nil || len(card.Checklist) == 0 {
+          if len(checkitems) > 0 {
+            checklist := card.AddChecklist()
+            issue.Checkmap = make(map[string]int)
+            issue.Checklist = make([]CheckItem, len(checkitems))
+
+            /* At each round updating internal representation not to cause trello-github recursion */
+            for i, v := range checkitems {
+              itemid := checklist.PostToChecklist(v)
+              v.Id = itemid
+              issue.Checkmap[i] = v
+              issue.Checkmap[itemid] = i + 1
+            }
+          }
+        } else if payload.Action == "edited" { /* Update the list */
+          /* Corner case, user removed the list */
+          if card.Checklist != nil && len(checkitems) == 0 {
+            issue.Checkmap = nil
+            issue.Checklist = nil
+            card.DelChecklist()
+          } else {
+            /* Walk one by one and apply changes */
+            for i, v := range checkitems {
+              /* If we overstep the original list means we have to add */
+              if i >= len(issue.Checklist) {
+                id := card.Checklist.PostToChecklist(v)
+                issue.Checkmap[id] = len(issue.Checklist) + 1
+                issue.Checklist = append(issue.Checklist, v)
+              } else {
+                /* Else apply modifications */
+                v.Id = issue.Checklist[i].Id
+                if v.Checked != issue.Checklist[i].Checked {
+                  card.Checklist.UpdateItemState(v.Id, v.Checked)
+                  issue.Checklist[i] = v
+                }
+                if v.Text != issue.Checklist[i].Text {
+                  card.Checklist.UpdateItemName(v.Id, v.Text)
+                  issue.Checklist[i] = v
+                }
+              }
+            }
+            /* If the incoming list was shorter, remove excess ones */
+            for i = len(issue.Checklist) -1 ; i >= len(checkitems); i-- {
+              card.Checklist.DelItem(issue.Checklist[i].Id)
+              delete(issue.Checkmap, issue.Checklist[i].Id)
+              issue.Checklist = issue.Checklist[:(i-1)]
+            }
+          }
+          /* TODO: some kind of merging algorithm */
+        }
+
         return http.StatusOK, "Got your back, captain."
       } else {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."

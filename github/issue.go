@@ -7,17 +7,19 @@ import (
 )
 
 type Issue struct {
-  RepoId    string
-  URL       string    `json:"html_url"`
-  Title     string    `json:"title"`
-  Body      string    `json:"body"`
-  IssueNo   int       `json:"number"`
-  LabelsDb  []Label   `json:"labels"`
+  RepoId      string          `json:"-"`
+  URL         string          `json:"html_url"`
+  Title       string          `json:"title"`
+  Body        string          `json:"body"`
+  IssueNo     int             `json:"number"`
+  LabelsDb    []Label         `json:"labels"`
   Assignees
-  github    *GitHub
+  github      *GitHub
 
-  Labels    Set
-  Members   Set
+  Labels      Set             `json:"-"`
+  Members     Set             `json:"-"`
+  Checkmap    map[string]int  `json:"-"`
+  Checklist   []CheckItem     `json:"-"`
 }
 
 /* Auto-converions to string */

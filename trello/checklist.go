@@ -16,12 +16,12 @@ type Checklist struct {
 }
 
 /* Add a checklist to the card and return the id */
-func (card *Card) addChecklist() *Checklist {
+func (card *Card) AddChecklist() *Checklist {
   log.Printf("Adding a checklist to the card %s.", card.Id)
   card.Checklist = new(Checklist)
   card.Checklist.card = card
   card.Checklist.State = make(map[string]*CheckItem)
-  GenPOSTForm(card.trello, "/cards/" + card.Id + "/checklists", &card.Checklist, url.Values{})
+  GenPOSTForm(card.trello, "/cards/" + card.Id + "/checklists", card.Checklist, url.Values{})
 
   return card.Checklist;
 }
@@ -32,8 +32,8 @@ func (card *Card) LinkChecklist(checklist *Checklist) {
   card.Checklist.State = make(map[string]*CheckItem)
 }
 
-/* Add an item to the checklist */
-func (checklist *Checklist) postToChecklist(itm CheckItem) {
+/* Add an item to the checklist and returns id */
+func (checklist *Checklist) PostToChecklist(itm CheckItem) string {
   log.Printf("Adding checklist item: %s.", itm.Text)
   var checkedTxt string
   if itm.Checked {
@@ -41,21 +41,39 @@ func (checklist *Checklist) postToChecklist(itm CheckItem) {
   } else {
     checkedTxt = "false"
   }
-  GenPOSTForm(checklist.card.trello, "/checklists/" + checklist.Id + "/checkItems", nil,
+  var data Object
+  GenPOSTForm(checklist.card.trello, "/checklists/" + checklist.Id + "/checkItems", &data,
     url.Values{ "name": { itm.Text }, "checked": { checkedTxt } })
+  return data.Id
 }
 
-/* Synchronise the list with incoming information from GitHub */
-func (card *Card) UpdateChecklist(itms []CheckItem) {
-  if card.Checklist == nil {
-    card.addChecklist()
+/* Updates an item state */
+func (checklist *Checklist) UpdateItemName(itemid string, newname string) {
+  log.Printf("Updating item %s with new name %s.", itemid, newname)
+  GenPUT(checklist.card.trello, "/cards/" + checklist.card.Id + "/checklists/" + checklist.Id +
+    "/checkItems/" + itemid + "/name?value=" + url.QueryEscape(newname))
+}
+
+func (checklist *Checklist) UpdateItemState(itemid string, newstate bool) {
+  statestr = "incomplete"
+  if newstate {
+    statestr = "complete"
   }
-  // TODO handle edit events merging the lists
-  for _, v := range itms {
-    card.Checklist.postToChecklist(v)
+  log.Printf("Updating item %s with new state %s.", itemid, statestr)
+  GenPUT(checklist.card.trello, "/cards/" + checklist.card.Id + "/checklists/" + checklist.Id +
+    "/checkItems/" + itemid + "/state?value=" + url.QueryEscape(statestr))
+}
+
+/* Remove a checkitem */
+func (checklist *Checklist) DelItem(itemid string) {
+  GenDEL(checklist.card.trello, "/checklists/" + checklist.Id + "/checkItems/" + itemid)
+}
+
+/* Remove whole checklist */
+func (card *Card) DelChecklist() {
+  if card.Checklist != nil {
+    GenDEL(checklist.card, "/card/" + card.Id + "/checklists/" + card.Checklist.Id)
   }
-  // TODO put this on update!
-  //card.Checklist.State = itms
 }
 
 /* Add an item to checklist */
