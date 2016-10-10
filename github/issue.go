@@ -61,7 +61,7 @@ func (issue *Issue) GetChecklist(utable map[string]string, body string) (string,
 
 /* Requests a reference to the issue */
 func (github *GitHub) GetIssue(repoid string, issueno int) *Issue {
-  res := Issue{ RepoId: repoid, IssueNo: issueno}
+  res := &Issue{ RepoId: repoid, IssueNo: issueno}
   if issue := github.issueBySpec[res.String()]; issue != nil {
     return issue
   } else {
@@ -70,16 +70,15 @@ func (github *GitHub) GetIssue(repoid string, issueno int) *Issue {
     res.cache()
     res.Members = NewSet()
     res.Labels = NewSet()
-    return &res
+    return res
   }
 }
 
-/* Updates Issue body */
-type bodyUpdate struct {
-  Body  string    `json:"body"`
+/* Updates Issue body/title */
+func (issue *Issue) UpdateBody(newbody string) {
+  GenPATCHJSON(issue.github, issue.ApiURL(), &struct { Body string `json:"body"` }{ newbody })
 }
 
-func (issue *Issue) UpdateBody(newbody string) {
-  payload := bodyUpdate { newbody }
-  GenPATCHJSON(issue.github, issue.ApiURL(), &payload)
+func (issue *Issue) UpdateTitle(newtitle string) {
+  GenPATCHJSON(issue.github, issue.ApiURL(), &struct { Title string `json:"title"` }{ newtitle })
 }

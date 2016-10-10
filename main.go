@@ -223,9 +223,14 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           card.Issue.UpdateBody(newbody)
         }
       }
-      // TODO:
-      // - card rename
-      // - card description update
+      /* If name changed */
+      if card.Name != event.Action.Data.Card.Name {
+        card.Name = event.Action.Data.Card.Name
+        /* Compare to the save one and update if needed */
+        if card.Issue != nil && card.Issue.Title != card.Name {
+          card.Issue.UpdateTitle(card.Name)
+        }
+      }
       return http.StatusOK, "Card update processed."
 
     case "addMemberToCard", "removeMemberFromCard":
