@@ -135,7 +135,7 @@ func GenDEL(this GenAPI, rq string) {
 func GenDELJSON(this GenAPI, rq string, v interface{}) {
   // TODO JSON errors
   payload, _ := json.Marshal(&v)
-  genericRequest(this, "DEL", rq, bytes.NewReader(payload))
+  genericRequest(this, "DELETE", rq, bytes.NewReader(payload))
 }
 
 /* Pass a map, process structure later */

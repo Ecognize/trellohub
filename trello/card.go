@@ -25,6 +25,13 @@ type Card struct {
 /* Places the card in the cache */
 func (card *Card) cache() {
   card.trello.cardById[card.Id] = card
+  if card.Issue != nil {
+    issuestr := card.Issue.String()
+    if card.trello.cardByIssue[issuestr] != card {
+      log.Printf("Card %s registered for issue %s", card.Id, issuestr)
+      card.trello.cardByIssue[issuestr] = card
+    }
+  }
 }
 
 /* Updates card data from the server */
@@ -119,6 +126,7 @@ func (card *Card) LinkIssue(issue *github.Issue) {
   if (card.Issue != issue) {
     card.trello.cardByIssue[issue.String()] = card
     card.Issue = issue
+    card.cache()
   }
 }
 

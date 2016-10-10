@@ -268,7 +268,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         newbody, checkitems := issue.GetChecklist(cache.TrelloUserByGitHub, payload.Issue.Body)
 
         /* Insert the card, attach the issue and label */
-        card := trello_obj.AddCard(trello_obj.Lists.InboxId, issue.Title, newbody)
+        card := trello_obj.AddCard(trello_obj.Lists.InboxId, payload.Issue.Title, newbody)
         card.AttachIssue(issue)
         card.SetLabel(labelid)
 
@@ -319,7 +319,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
       issue.Members[user] = add
 
       /* Find the card and the user */
-      if tuser, card := cache.TrelloUserByGitHub[issue.Assignee.Name], trello_obj.FindCard(issue.String());
+      if tuser, card := cache.TrelloUserByGitHub[user], trello_obj.FindCard(issue.String());
         len(tuser) > 0 && len(card.Id) > 0 {
         /* Determine mode of operation */
         present := card.Members[trello_obj.UserByName(tuser)]
@@ -337,7 +337,11 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         }
       /* Something's wrong */
       } else {
-        return http.StatusNotFound, "Either this user is not one of us, or the card is nowhere to be found. I dunno man."
+        if len(tuser) <= 0 {
+          return http.StatusNotFound, "We do not serve user" + user + "."
+        } else {
+          return http.StatusNotFound, "Can't find the corresponding card, probably issue is older than sync."
+        }
       }
     }
 
