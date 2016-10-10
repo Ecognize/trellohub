@@ -63,7 +63,7 @@ func (card *Card) update() {
 
 /* Adds a card to the list with a given name and returns the card id */
 func (trello *Trello) AddCard(listid string, name string, desc string) *Card {
-  data := Card{ trello: trello }
+  data := Card{ trello: trello, Members: NewSet() }
   GenPOSTForm(trello, "/cards/", &data, url.Values{
     "name": { name },
     "idList": { listid },
