@@ -24,7 +24,10 @@ type Card struct {
 
 /* Places the card in the cache */
 func (card *Card) cache() {
+  log.Printf("Card %s %s", card.Id, card.Name)
+  log.Printf("Map before %#v", card.trello.cardById)
   card.trello.cardById[card.Id] = card
+  log.Printf("Map after %#v", card.trello.cardById)
   if card.Issue != nil {
     issuestr := card.Issue.String()
     if card.trello.cardByIssue[issuestr] != card {
@@ -78,12 +81,15 @@ func (trello *Trello) AddCard(listid string, name string, desc string) *Card {
 
 /* Retrieves the card from the server */
 func (trello *Trello) GetCard(cardid string) *Card {
+  log.Printf("Request: %s", cardid)
+  log.Printf("Map state: %#v", trello.cardById)
   if card := trello.cardById[cardid]; card == nil {
-    data := Card{ trello: trello, Id: cardid, Members: NewSet() }
+    data := &Card{ trello: trello, Id: cardid, Members: NewSet() }
     data.update()
     data.cache()
-    return &data
+    return data
   } else {
+    log.Printf("Mapped card: %#v", *trello.cardById[cardid])
     return card
   }
 }
@@ -114,14 +120,12 @@ func (trello *Trello) makeCardCache() {
   var data []Card
   GenGET(trello, "/boards/" + trello.BoardId + "/cards/", &data)
 
-  for _, card := range data {
+  for _, v := range data {
+    card := new(Card)
+    *card = v
     card.trello = trello
     card.update()
     card.cache()
-    log.Printf("%#v", card.Issue)
-    if card.Issue != nil {
-      log.Printf("%#v %#v", card, *card.Issue)
-    }
   }
 }
 

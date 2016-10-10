@@ -58,8 +58,8 @@ func (card *Card) UpdateChecklist(itms []CheckItem) {
 }
 
 /* Add an item to checklist */
-func (checklist *Checklist) AddToChecklist(itm CheckItem) {
-  checklist.State[itm.Id] = &itm
+func (checklist *Checklist) AddToChecklist(itm *CheckItem) {
+  checklist.State[itm.Id] = itm
 }
 
 /* Renders the checklist into GitHub's Markdown */

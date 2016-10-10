@@ -267,11 +267,15 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
       /* Update the model */
       switch (evt) {
       case "addChecklistToCard":
-        card.LinkChecklist(&event.Action.Data.ChList)
+        checklist := new(trello.Checklist)
+        *checklist = event.Action.Data.ChList
+        card.LinkChecklist(checklist)
         // TODO: checklists which already have items!
         return http.StatusOK, "New checklist registered"
       case "createCheckItem":
-        card.Checklist.AddToChecklist(event.Action.Data.ChItem)
+        item := new(CheckItem)
+        *item = event.Action.Data.ChItem
+        card.Checklist.AddToChecklist(item)
       case "updateCheckItemStateOnCard":
         /* TODO assert not nil */
         card.Checklist.State[event.Action.Data.ChItem.Id].Checked = event.Action.Data.ChItem.Checked
