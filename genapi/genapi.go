@@ -46,7 +46,7 @@ type CheckItem struct {
 }
 
 func (ch *CheckItem) FromTrello() {
-  ch.Checked = ch.State == "complete"
+  ch.Checked = (ch.State == "complete")
 }
 
 func (ch *CheckItem) ForTrello() {

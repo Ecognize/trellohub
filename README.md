@@ -47,3 +47,4 @@ Code generally not thread-safe, race conditions possible in case of fast event s
 - Pass by reference and stuff
 - Treat Trello IDs as large integers maaybe?
 - Find a workaround for `issue.String()`
+- Reordering items in the checklist

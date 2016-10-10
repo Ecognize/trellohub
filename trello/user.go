@@ -13,7 +13,7 @@ type tUser struct {
 }
 
 /* Check if a user is assigned to the card */
-func (card *Card) updateMembers() {
+func (card *Card) loadMembers() {
   var users []tUser
   GenGET(card.trello, "/cards/" + card.Id + "/members", &users)
 

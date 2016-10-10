@@ -9,7 +9,8 @@ import (
 )
 
 type Checklist struct {
-  Object
+  Id      string                 `json:"id"`
+  Items   []CheckItem            `json:"checkItems"` // only used at load!
   State   map[string]*CheckItem  `json:"-"`
   card    *Card
 }
@@ -60,6 +61,26 @@ func (card *Card) UpdateChecklist(itms []CheckItem) {
 /* Add an item to checklist */
 func (checklist *Checklist) AddToChecklist(itm *CheckItem) {
   checklist.State[itm.Id] = itm
+}
+
+/* Loads the first checklist from Trello */
+func (card *Card) LoadChecklists() {
+  var data []Checklist
+  GenGET(card.trello, "/cards/" + card.Id + "/checklists", &data)
+
+  if len(data) > 0 {
+    checklist := new(Checklist)
+    checklist.Id = data[0].Id
+    card.LinkChecklist(checklist)
+    for _, v := range data[0].Items {
+      itm := new(CheckItem)
+      *itm = v
+      itm.FromTrello()
+      checklist.AddToChecklist(itm)
+    }
+  } else {
+    card.Checklist = nil
+  }
 }
 
 /* Renders the checklist into GitHub's Markdown */
