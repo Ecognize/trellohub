@@ -211,6 +211,18 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
 
         card.ListId = event.Action.Data.ListA.Id
       }
+      /* If description changed */
+      if card.Desc != event.Action.Data.Card.Desc {
+        card.Desc = event.Action.Data.Card.Desc
+        /* Compare to the save one and regenerate if needed */
+        if card.Issue != nil && card.Issue.Body != card.Desc {
+          newbody := RepMentions(card.Desc, cache.GitHubUserByTrello)
+          if card.Checklist != nil {
+            newbody = newbody + card.Checklist.Render(cache.GitHubUserByTrello)
+          }
+          card.Issue.UpdateBody(newbody)
+        }
+      }
       // TODO:
       // - card rename
       // - card description update
@@ -318,6 +330,8 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         /* Generating an in-DB refernce */
         issue := github_obj.GetIssue(payload.Repo.Spec, payload.Issue.IssueNo)
         newbody, checkitems := issue.GetChecklist(cache.TrelloUserByGitHub, payload.Issue.Body)
+        issue.Body = newbody
+        issue.Title = payload.Issue.Title
 
         /* Insert the card, attach the issue and label */
         card := trello_obj.AddCard(trello_obj.Lists.InboxId, payload.Issue.Title, newbody)
