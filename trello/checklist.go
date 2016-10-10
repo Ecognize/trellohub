@@ -10,7 +10,7 @@ import (
 
 type Checklist struct {
   Object
-  state   []CheckItem
+  State   map[string]*CheckItem  `json:"-"`
   card    *Card
 }
 
@@ -19,6 +19,7 @@ func (card *Card) addChecklist() *Checklist {
   log.Printf("Adding a checklist to the card %s.", card.Id)
   card.Checklist = new(Checklist)
   card.Checklist.card = card
+  card.Checklist.State = make(map[string]*CheckItem)
   GenPOSTForm(card.trello, "/cards/" + card.Id + "/checklists", &card.Checklist, url.Values{})
 
   return card.Checklist;
@@ -27,6 +28,7 @@ func (card *Card) addChecklist() *Checklist {
 func (card *Card) LinkChecklist(checklist *Checklist) {
   card.Checklist = checklist
   card.Checklist.card = card
+  card.Checklist.State = make(map[string]*CheckItem)
 }
 
 /* Add an item to the checklist */
@@ -52,19 +54,18 @@ func (card *Card) UpdateChecklist(itms []CheckItem) {
     card.Checklist.postToChecklist(v)
   }
   // TODO put this on update!
-  card.Checklist.state = itms
+  //card.Checklist.State = itms
 }
 
 /* Add an item to checklist */
 func (checklist *Checklist) AddToChecklist(itm CheckItem) {
-  checklist.state = append(checklist.state, itm)
+  checklist.State[itm.Id] = &itm
 }
-
 
 /* Renders the checklist into GitHub's Markdown */
 func (checklist *Checklist) Render(table map[string]string) string {
   res := ""
-  for _, v := range checklist.state {
+  for _, v := range checklist.State {
     var on byte
     if (v.Checked) {
       on = 'X'
