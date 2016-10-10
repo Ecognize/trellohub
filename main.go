@@ -245,7 +245,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
 
     case "addChecklistToCard", "createCheckItem",
       "updateCheckItemStateOnCard", "updateCheckItem",
-      "deleteCheckItem":
+      "deleteCheckItem", "removeChecklistFromCard":
       card := trello_obj.GetCard(event.Action.Data.Card.Id)
       /* If card has no issue, drop it */
       if card.Issue == nil {
@@ -258,7 +258,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         if card.Checklist != nil {
           return http.StatusOK, "Got a checklist already."
         }
-      case "createCheckItem", "updateCheckItemStateOnCard", "deleteCheckItem":
+      case "createCheckItem", "updateCheckItemStateOnCard", "deleteCheckItem", "removeChecklistFromCard":
         if card.Checklist == nil || card.Checklist.Id != event.Action.Data.ChList.Id {
           return http.StatusOK, "Not interested in that checklist."
         }
@@ -283,9 +283,15 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         card.Checklist.State[event.Action.Data.ChItem.Id].Text = event.Action.Data.ChItem.Text
       case "deleteCheckItem":
         delete(card.Checklist.State, event.Action.Data.ChItem.Id)
+      case "removeChecklistFromCard":
+        card.LoadChecklists()
       }
       /* Regenerate the new issue body and update it */
-      card.Issue.UpdateBody(RepMentions(card.Desc, cache.GitHubUserByTrello) + card.Checklist.Render(cache.GitHubUserByTrello))
+      newbody := RepMentions(card.Desc, cache.GitHubUserByTrello)
+      if card.Checklist != nil { /* We may have deleted the checklist */
+        newbody = newbody + card.Checklist.Render(cache.GitHubUserByTrello)
+      }
+      card.Issue.UpdateBody(newbody)
       return http.StatusOK, "Checklists updated"
 
     default:
