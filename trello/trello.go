@@ -31,6 +31,10 @@ type Payload struct {
       ChList  Checklist     `json:"checklist"`
       ChItem  CheckItem     `json:"checkItem"`
       Card    Card          `json:"card"`
+      Old     struct {
+        Name  string        `json:"name"`
+        Desc  string        `json:"desc"`
+      }                     `json:"old"`
       ListB   Object        `json:"listBefore"`
       ListA   Object        `json:"listAfter"`
       Attach  struct {

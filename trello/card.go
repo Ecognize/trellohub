@@ -111,7 +111,7 @@ func (trello *Trello) FindCard(issue string) *Card {
 /* Fetch all cards from the board and [re-]initialise caches */
 func (trello *Trello) makeCardCache() {
   var data []Card
-  GenGET(trello, "/boards/" + trello.BoardId + "/cards/", &data)
+  GenGET(trello, "/boards/" + trello.BoardId + "/cards", &data)
 
   for _, v := range data {
     card := new(Card)
@@ -129,6 +129,15 @@ func (card *Card) LinkIssue(issue *github.Issue) {
     card.Issue = issue
     card.cache()
   }
+}
+
+/* Update name/description */
+func (card *Card) UpdateName(newname string) {
+  GenPUT(card.trello, "/cards/" + card.Id + "/name?value=" + url.QueryEscape(newname))
+}
+
+func (card *Card) UpdateDesc(newdesc string) {
+  GenPUT(card.trello, "/cards/" + card.Id + "/desc?value=" + url.QueryEscape(newdesc))
 }
 
 /* TODO handlers:

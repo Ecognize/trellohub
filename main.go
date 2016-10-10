@@ -212,7 +212,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         card.ListId = event.Action.Data.ListA.Id
       }
       /* If description changed */
-      if card.Desc != event.Action.Data.Card.Desc {
+      if event.Action.Data.Card.Desc != event.Action.Data.Old.Desc {
         card.Desc = event.Action.Data.Card.Desc
         /* Compare to the save one and regenerate if needed */
         if card.Issue != nil && card.Issue.Body != card.Desc {
@@ -224,7 +224,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         }
       }
       /* If name changed */
-      if card.Name != event.Action.Data.Card.Name {
+      if event.Action.Data.Card.Name != event.Action.Data.Old.Name {
         card.Name = event.Action.Data.Card.Name
         /* Compare to the save one and update if needed */
         if card.Issue != nil && card.Issue.Title != card.Name {
@@ -329,7 +329,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
 
     /* Guess we have a new issue */
     switch (payload.Action) {
-    case "opened":
+    case "opened","edited":
       /* Look up the corresponding trello label */
       if labelid := trello_obj.GetLabel(payload.Repo.Spec); len(labelid) > 0 {
         /* Generating an in-DB refernce */
@@ -338,27 +338,41 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         issue.Body = newbody
         issue.Title = payload.Issue.Title
 
-        /* Insert the card, attach the issue and label */
-        card := trello_obj.AddCard(trello_obj.Lists.InboxId, payload.Issue.Title, newbody)
-        card.AttachIssue(issue)
-        card.SetLabel(labelid)
+        if payload.Action == "opened" {
+          /* Insert the card, attach the issue and label */
+          card := trello_obj.AddCard(trello_obj.Lists.InboxId, payload.Issue.Title, newbody)
+          card.AttachIssue(issue)
+          card.SetLabel(labelid)
 
-        issue.AddLabel("inbox")
-        issue.SetLabels(payload.Issue.LabelsDb)
-        issue.SetMembers(payload.Issue.Assigs)
-        for k, v := range issue.Members {
-          if v {
-            card.AddUser(cache.TrelloUserByGitHub[k])
+          issue.AddLabel("inbox")
+          issue.SetLabels(payload.Issue.LabelsDb)
+          issue.SetMembers(payload.Issue.Assigs)
+          for k, v := range issue.Members {
+            if v {
+              card.AddUser(cache.TrelloUserByGitHub[k])
+            }
+          }
+
+          /* Form a checklist */
+          if len(checkitems) > 0 {
+            card.UpdateChecklist(checkitems)
+          }
+
+          /* Happily report */
+          log.Printf("Creating card %s for issue %s\n", card.Id, issue.String())
+        } else if payload.Action == "edited" {
+          if card := trello_obj.FindCard(issue.String()); card != nil {
+            /* Post updates to whichever attribute changed */
+            if card.Name != issue.Title {
+              card.UpdateName(issue.Title)
+            }
+            if card.Desc != issue.Body {
+              card.UpdateDesc(issue.Body)
+            }
+          } else {
+            return http.StatusNotFound, "Can't find the card, are we dealing with an old issue?"
           }
         }
-
-        /* Form a checklist */
-        if len(checkitems) > 0 {
-          card.UpdateChecklist(checkitems)
-        }
-
-        /* Happily report */
-        log.Printf("Creating card %s for issue %s\n", card.Id, issue.String())
         return http.StatusOK, "Got your back, captain."
       } else {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."
@@ -391,7 +405,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
 
       /* Find the card and the user */
       if tuser, card := cache.TrelloUserByGitHub[user], trello_obj.FindCard(issue.String());
-        len(tuser) > 0 && len(card.Id) > 0 {
+        len(tuser) > 0 && card != nil {
         /* Determine mode of operation */
         present := card.Members[trello_obj.UserByName(tuser)]
 

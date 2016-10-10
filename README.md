@@ -48,3 +48,4 @@ Code generally not thread-safe, race conditions possible in case of fast event s
 - Treat Trello IDs as large integers maaybe?
 - Find a workaround for `issue.String()`
 - Reordering items in the checklist
+- Title and Description sync might have some lingering bugs, but those are minor
