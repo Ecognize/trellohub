@@ -118,6 +118,10 @@ func (trello *Trello) makeCardCache() {
     card.trello = trello
     card.update()
     card.cache()
+    log.Printf("%#v", card.Issue)
+    if card.Issue != nil {
+      log.Printf("%#v %#v", card, *card.Issue)
+    }
   }
 }
 

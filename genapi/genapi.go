@@ -152,6 +152,12 @@ func GenDELJSON(this GenAPI, rq string, v interface{}) {
   genericRequest(this, "DELETE", rq, bytes.NewReader(payload))
 }
 
+func GenPATCHJSON(this GenAPI, rq string, v interface{}) {
+  // TODO JSON errors
+  payload, _ := json.Marshal(&v)
+  genericRequest(this, "PATCH", rq, bytes.NewReader(payload))
+}
+
 /* Pass a map, process structure later */
 func GenPOSTForm(this GenAPI, rq string, v interface{}, f url.Values) { // TODO replace url.values with a struct
   log.Printf("=> POST %s", rq)

@@ -73,3 +73,13 @@ func (github *GitHub) GetIssue(repoid string, issueno int) *Issue {
     return &res
   }
 }
+
+/* Updates Issue body */
+type bodyUpdate struct {
+  Body  string    `json:"body"`
+}
+
+func (issue *Issue) UpdateBody(newbody string) {
+  payload := bodyUpdate { newbody }
+  GenPATCHJSON(issue.github, issue.ApiURL(), &payload)
+}
