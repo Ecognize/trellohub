@@ -282,6 +282,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         event.Action.Data.ChItem.FromTrello()
       }
       /* Update the model */
+      needsUpdate := true
       switch (evt) {
       case "addChecklistToCard":
         checklist := new(trello.Checklist)
@@ -295,24 +296,40 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         card.Checklist.AddToChecklist(item)
       case "updateCheckItemStateOnCard":
         /* TODO assert not nil */
+        if no := card.Issue.Checkmap[event.Action.Data.ChItem.Id]; no <= 0 ||
+          card.Issue.Checklist[no].Checked == event.Action.Data.ChItem.Checked {
+          needsUpdate = false
+        }
         card.Checklist.State[event.Action.Data.ChItem.Id].Checked = event.Action.Data.ChItem.Checked
       case "updateCheckItem":
+        if no := card.Issue.Checkmap[event.Action.Data.ChItem.Id]; no <= 0 ||
+          card.Issue.Checklist[no].Text == event.Action.Data.ChItem.Text {
+          needsUpdate = false
+        }
         card.Checklist.State[event.Action.Data.ChItem.Id].Text = event.Action.Data.ChItem.Text
       case "deleteCheckItem":
+        if card.Issue.Checkmap[event.Action.Data.ChItem.Id] <= 0 {
+          needsUpdate = false
+        }
         delete(card.Checklist.State, event.Action.Data.ChItem.Id)
       case "removeChecklistFromCard":
-        card.LoadChecklists()
+        card.Checklist = nil
+        if card.Issue.Checklist == nil || len(card.Issue.Checklist) == 0 {
+          needsUpdate = false
+        }
       }
-      /* Regenerate the new issue body and update it */
-      newbody := RepMentions(card.Desc, cache.GitHubUserByTrello)
-      if card.Checklist != nil { /* We may have deleted the checklist */
-        newbody = newbody + card.Checklist.Render(cache.GitHubUserByTrello)
+      if needsUpdate {
+        /* Regenerate the new issue body and update it */
+        newbody := RepMentions(card.Desc, cache.GitHubUserByTrello)
+        if card.Checklist != nil { /* We may have deleted the checklist */
+          newbody = newbody + card.Checklist.Render(cache.GitHubUserByTrello)
+        }
+        card.Issue.UpdateBody(newbody)
       }
-      card.Issue.UpdateBody(newbody)
       return http.StatusOK, "Checklists updated"
 
     default:
-      log.Print(string(body[:]))
+      //log.Print(string(body[:]))
     }
 
     return http.StatusOK, "Erm, hello."
@@ -337,10 +354,13 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         newbody, checkitems := issue.GetChecklist(cache.TrelloUserByGitHub, payload.Issue.Body)
         issue.Body = newbody
         issue.Title = payload.Issue.Title
+        var card *trello.Card
+        needsUpdateTitle := false
+        needsUpdateBody := false
 
         if payload.Action == "opened" {
           /* Insert the card, attach the issue and label */
-          card := trello_obj.AddCard(trello_obj.Lists.InboxId, payload.Issue.Title, newbody)
+          card = trello_obj.AddCard(trello_obj.Lists.InboxId, payload.Issue.Title, newbody)
           card.AttachIssue(issue)
           card.SetLabel(labelid)
 
@@ -356,13 +376,15 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
           /* Happily report */
           log.Printf("Creating card %s for issue %s\n", card.Id, issue.String())
         } else if payload.Action == "edited" {
-          if card := trello_obj.FindCard(issue.String()); card != nil {
+          if card = trello_obj.FindCard(issue.String()); card != nil {
             /* Post updates to whichever attribute changed */
             if card.Name != issue.Title {
+              needsUpdateTitle = true
+
               card.UpdateName(issue.Title)
             }
             if card.Desc != issue.Body {
-              card.UpdateDesc(issue.Body)
+              needsUpdateBody = true
             }
           } else {
             return http.StatusNotFound, "Can't find the card, are we dealing with an old issue?"
@@ -370,7 +392,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         }
 
         /* If issue is just opened or if it's an edit that might potentially add a checklist, try forming it */
-        if payload.Action == "opened" || card.Checklist == nil || len(card.Checklist) == 0 {
+        if payload.Action == "opened" || card.Checklist == nil {
           if len(checkitems) > 0 {
             checklist := card.AddChecklist()
             issue.Checkmap = make(map[string]int)
@@ -380,9 +402,12 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
             for i, v := range checkitems {
               itemid := checklist.PostToChecklist(v)
               v.Id = itemid
-              issue.Checkmap[i] = v
+              issue.Checklist[i] = v
               issue.Checkmap[itemid] = i + 1
             }
+          } else {
+            issue.Checkmap = nil
+            issue.Checklist = nil
           }
         } else if payload.Action == "edited" { /* Update the list */
           /* Corner case, user removed the list */
@@ -412,13 +437,20 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
               }
             }
             /* If the incoming list was shorter, remove excess ones */
-            for i = len(issue.Checklist) -1 ; i >= len(checkitems); i-- {
+            for i := len(issue.Checklist) -1 ; i >= len(checkitems); i-- {
               card.Checklist.DelItem(issue.Checklist[i].Id)
               delete(issue.Checkmap, issue.Checklist[i].Id)
               issue.Checklist = issue.Checklist[:(i-1)]
             }
           }
           /* TODO: some kind of merging algorithm */
+        }
+
+        if (needsUpdateBody) {
+          card.UpdateDesc(issue.Body)
+        }
+        if (needsUpdateTitle) {
+          card.UpdateDesc(issue.Title)
         }
 
         return http.StatusOK, "Got your back, captain."

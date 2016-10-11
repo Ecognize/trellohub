@@ -55,7 +55,7 @@ func (checklist *Checklist) UpdateItemName(itemid string, newname string) {
 }
 
 func (checklist *Checklist) UpdateItemState(itemid string, newstate bool) {
-  statestr = "incomplete"
+  statestr := "incomplete"
   if newstate {
     statestr = "complete"
   }
@@ -72,7 +72,7 @@ func (checklist *Checklist) DelItem(itemid string) {
 /* Remove whole checklist */
 func (card *Card) DelChecklist() {
   if card.Checklist != nil {
-    GenDEL(checklist.card, "/card/" + card.Id + "/checklists/" + card.Checklist.Id)
+    GenDEL(card.trello, "/card/" + card.Id + "/checklists/" + card.Checklist.Id)
   }
 }
 

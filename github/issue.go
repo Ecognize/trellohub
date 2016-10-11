@@ -47,6 +47,7 @@ func (issue *Issue) cache() {
 /* Retrieves the issue data from the server */
 func (issue *Issue) update() {
   GenGET(issue.github, issue.ApiURL(), issue)
+  newbody, checkitems := issue.GetChecklist(cache.TrelloUserByGitHub, payload.Issue.Body)
 }
 
 /* Parses body and outputs the actual body and checklists, takes username correspondence table as input */
@@ -68,7 +69,7 @@ func (github *GitHub) GetIssue(repoid string, issueno int) *Issue {
     return issue
   } else {
     res.github = github
-  //  res.update() Do we need it ever?
+    res.update() Do we need it ever?
     res.cache()
     res.Members = NewSet()
     res.Labels = NewSet()
