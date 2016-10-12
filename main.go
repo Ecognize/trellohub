@@ -170,6 +170,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
     var event trello.Payload
     json.Unmarshal(body, &event)
     evt := event.Action.Type
+    log.Printf("[Trello] %s", evt)
 
     /* Determining which action happened */
     switch (evt) {
@@ -349,6 +350,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
     /* TODO check whether we serve this repo */
     var payload github.Payload
     json.Unmarshal(body, &payload)
+    log.Printf("[Github Issues] %s", payload.Action)
 
     /* Guess we have a new issue */
     switch (payload.Action) {
