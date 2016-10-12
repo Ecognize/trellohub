@@ -8,6 +8,7 @@ import (
     "io/ioutil"
     "encoding/json"
     "regexp"
+    "sync"
     . "github.com/ErintLabs/trellohub/genapi"
     "github.com/ErintLabs/trellohub/trello"
     "github.com/ErintLabs/trellohub/github"
@@ -30,8 +31,9 @@ var config struct {
 var cache struct {
   GitLabelByListId    map[string]string
   ListIdByGitLabel    map[string]string
-  GitHubUserByTrello       map[string]string
-  TrelloUserByGitHub       map[string]string
+  GitHubUserByTrello  map[string]string
+  TrelloUserByGitHub  map[string]string
+  mutex               sync.Mutex
 }
 
 func GetEnv(varname string) string {
@@ -131,6 +133,10 @@ func main() {
 type handleSubroutine func (body []byte) (int, string)
 
 func GeneralisedProcess(w http.ResponseWriter, r *http.Request, f handleSubroutine) {
+  /* We don't care about performance, therefore enforce that only one proc can be running at a given time */
+  cache.mutex.Lock()
+  defer cache.mutex.Unlock()
+  
   // TODO io.LimitReader
   // TODO check if its or POST
   body, err := ioutil.ReadAll(r.Body)
