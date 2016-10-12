@@ -315,7 +315,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         }
       case "createCheckItem":
         card.Checklist.AddToChecklist(event.Action.Data.ChItem)
-        if checklist := card.Issue.Checklist; checklist != nil && len(card.Checklist.Items) == len(checklist) {
+        if checklist := card.Issue.Checklist; checklist != nil && len(card.Checklist.Items) <= len(checklist) {
           needsUpdate = false
         }
       case "updateCheckItemStateOnCard":
@@ -386,7 +386,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
           /* Aww crappity! */
           log.Printf("[BUG] Server sent us nonsense payload, using in-house data.")
           issue.Body = issue.Newbody
-          issue.Newbody = ""
+          issue.Newbody = payload.Issue.Body // just in case
         } else {        
           issue.Body = payload.Issue.Body
         }
@@ -456,7 +456,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
               }
             }
             /* If the incoming list was shorter, remove excess ones */
-            for i := len(issue.Checklist) -1 ; i >= len(card.Checklist.Items); i-- {
+            for i := len(card.Checklist.Items) - 1 ; i >= len(issue.Checklist); i-- {
               card.Checklist.DelItem(i)
             }
           }
