@@ -45,6 +45,14 @@ func GetEnv(varname string) string {
   return res
 }
 
+func g2t(str string) string {
+  return RepMentions(str, cache.GitHubUserByTrello)
+}
+
+func t2g(str string) string {
+  return RepMentions(str, cache.TrelloUserByGitHub)
+}
+
 func main() {
   /* Check if we are run to [re]-initialise the board */
   if (len(os.Args) >= 4) {
@@ -222,20 +230,20 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
       if event.Action.Data.Card.Desc != event.Action.Data.Old.Desc {
         card.Desc = event.Action.Data.Card.Desc
         /* Compare to the save one and regenerate if needed */
-        if card.Issue != nil && card.Issue.Body != card.Desc {
-          newbody := RepMentions(card.Desc, cache.GitHubUserByTrello)
+        if card.Issue != nil && g2t(card.Issue.Body) != card.Desc {
+          newbody := card.Desc
           if card.Checklist != nil {
-            newbody = newbody + card.Checklist.Render(cache.GitHubUserByTrello)
+            newbody = newbody + card.Checklist.Render()
           }
-          card.Issue.UpdateBody(newbody)
+          card.Issue.UpdateBody(t2g(newbody))
         }
       }
       /* If name changed */
       if event.Action.Data.Card.Name != event.Action.Data.Old.Name {
         card.Name = event.Action.Data.Card.Name
         /* Compare to the save one and update if needed */
-        if card.Issue != nil && card.Issue.Title != card.Name {
-          card.Issue.UpdateTitle(card.Name)
+        if card.Issue != nil && g2t(card.Issue.Title) != card.Name {
+          card.Issue.UpdateTitle(t2g(card.Name))
         }
       }
       return http.StatusOK, "Card update processed."
@@ -286,52 +294,62 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         if card.Checklist == nil || card.Checklist.Id != event.Action.Data.ChList.Id {
           return http.StatusOK, "Not interested in that checklist."
         }
-        event.Action.Data.ChItem.FromTrello()
+      }
+      /* Sanity checks */
+      switch (evt) {
+      case "updateCheckItemStateOnCard", "deleteCheckItem":
+        if card.Issue.Checklist == nil || card.Checklist == nil {
+          log.Printf("[ERROR] Operating on nil checklist. issue.chlist = %#v card.chlist = %#v", card.Issue.Checklist, card.Checklist)
+          return http.StatusInternalServerError, "Nil checklist encountered"
+        }
       }
       /* Update the model */
       needsUpdate := true
       switch (evt) {
       case "addChecklistToCard":
-        checklist := new(trello.Checklist)
-        *checklist = event.Action.Data.ChList
-        card.LinkChecklist(checklist)
-        // TODO: checklists which already have items!
-        return http.StatusOK, "New checklist registered"
+        card.CopyChecklist(&event.Action.Data.ChList)
+        /* If the checklist is empty, no need to update the issue */
+        // TODO check if it works with pre-filled checklists
+        if len(card.Checklist.Items) == 0 {
+          return http.StatusOK, "New checklist registered"
+        }
       case "createCheckItem":
-        item := new(CheckItem)
-        *item = event.Action.Data.ChItem
-        card.Checklist.AddToChecklist(item)
+        card.Checklist.AddToChecklist(event.Action.Data.ChItem)
+        if checklist := card.Issue.Checklist; checklist != nil && len(card.Checklist.Items) == len(checklist) {
+          needsUpdate = false
+        }
       case "updateCheckItemStateOnCard":
-        /* TODO assert not nil */
-        if no := card.Issue.Checkmap[event.Action.Data.ChItem.Id]; no <= 0 ||
-          card.Issue.Checklist[no].Checked == event.Action.Data.ChItem.Checked {
+        no := card.Checklist.At(event.Action.Data.ChItem.Id)
+        check := event.Action.Data.ChItem.State == "complete"
+        if card.Issue.Checklist[no].Checked == check {
           needsUpdate = false
         }
-        card.Checklist.State[event.Action.Data.ChItem.Id].Checked = event.Action.Data.ChItem.Checked
+        card.Checklist.Items[no].Checked = check
       case "updateCheckItem":
-        if no := card.Issue.Checkmap[event.Action.Data.ChItem.Id]; no <= 0 ||
-          card.Issue.Checklist[no].Text == event.Action.Data.ChItem.Text {
+        no := card.Checklist.At(event.Action.Data.ChItem.Id)
+        if card.Issue.Checklist[no].Text == t2g(event.Action.Data.ChItem.Text) {
           needsUpdate = false
         }
-        card.Checklist.State[event.Action.Data.ChItem.Id].Text = event.Action.Data.ChItem.Text
+        card.Checklist.Items[no].Text = event.Action.Data.ChItem.Text
       case "deleteCheckItem":
-        if card.Issue.Checkmap[event.Action.Data.ChItem.Id] <= 0 {
+        /* If the lengths are the same, it's a Trello UI generated event */
+        if len(card.Checklist.Items) != len(card.Issue.Checklist) {
           needsUpdate = false
         }
-        delete(card.Checklist.State, event.Action.Data.ChItem.Id)
+        card.Checklist.Unlink(card.Checklist.At(event.Action.Data.ChItem.Id))
       case "removeChecklistFromCard":
         card.Checklist = nil
-        if card.Issue.Checklist == nil || len(card.Issue.Checklist) == 0 {
+        if card.Issue.Checklist == nil {
           needsUpdate = false
         }
       }
       if needsUpdate {
         /* Regenerate the new issue body and update it */
-        newbody := RepMentions(card.Desc, cache.GitHubUserByTrello)
+        newbody := card.Desc
         if card.Checklist != nil { /* We may have deleted the checklist */
-          newbody = newbody + card.Checklist.Render(cache.GitHubUserByTrello)
+          newbody = newbody + card.Checklist.Render()
         }
-        card.Issue.UpdateBody(newbody)
+        card.Issue.UpdateBody(t2g(newbody))
       }
       return http.StatusOK, "Checklists updated"
 
@@ -351,24 +369,26 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
     var payload github.Payload
     json.Unmarshal(body, &payload)
     log.Printf("[Github Issues] %s", payload.Action)
-
+    
     /* Guess we have a new issue */
     switch (payload.Action) {
     case "opened","edited":
       /* Look up the corresponding trello label */
       if labelid := trello_obj.GetLabel(payload.Repo.Spec); len(labelid) > 0 {
-        /* Generating an in-DB refernce */
+        /* Generating an in-DB refernce and updating it */
         issue := github_obj.GetIssue(payload.Repo.Spec, payload.Issue.IssueNo)
-        newbody, checkitems := issue.GetChecklist(cache.TrelloUserByGitHub, payload.Issue.Body)
-        issue.Body = newbody
         issue.Title = payload.Issue.Title
+        issue.Body = payload.Issue.Body
+        issue.GenChecklist()
+        
+        /* Shortcuts */
+        trello_title := g2t(issue.Title)
+        trello_descr := g2t(issue.Body)
         var card *trello.Card
-        needsUpdateTitle := false
-        needsUpdateBody := false
 
         if payload.Action == "opened" {
           /* Insert the card, attach the issue and label */
-          card = trello_obj.AddCard(trello_obj.Lists.InboxId, payload.Issue.Title, newbody)
+          card = trello_obj.AddCard(trello_obj.Lists.InboxId, trello_title, trello_descr)
           card.AttachIssue(issue)
           card.SetLabel(labelid)
 
@@ -386,13 +406,11 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         } else if payload.Action == "edited" {
           if card = trello_obj.FindCard(issue.String()); card != nil {
             /* Post updates to whichever attribute changed */
-            if card.Name != issue.Title {
-              needsUpdateTitle = true
-
-              card.UpdateName(issue.Title)
+            if card.Name != trello_title {
+              card.UpdateDesc(trello_title)
             }
-            if card.Desc != issue.Body {
-              needsUpdateBody = true
+            if card.Desc != trello_descr {
+              card.UpdateDesc(trello_descr)
             }
           } else {
             return http.StatusNotFound, "Can't find the card, are we dealing with an old issue?"
@@ -401,66 +419,38 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
 
         /* If issue is just opened or if it's an edit that might potentially add a checklist, try forming it */
         if payload.Action == "opened" || card.Checklist == nil {
-          if len(checkitems) > 0 {
+          if len(issue.Checklist) > 0 {
             checklist := card.AddChecklist()
-            issue.Checkmap = make(map[string]int)
-            issue.Checklist = make([]CheckItem, len(checkitems))
-
-            /* At each round updating internal representation not to cause trello-github recursion */
-            for i, v := range checkitems {
-              itemid := checklist.PostToChecklist(v)
-              v.Id = itemid
-              issue.Checklist[i] = v
-              issue.Checkmap[itemid] = i + 1
+            for _, v := range issue.Checklist {
+              checklist.PostToChecklist(CheckItem{ Text: g2t(v.Text) , Checked: v.Checked })
             }
-          } else {
-            issue.Checkmap = nil
-            issue.Checklist = nil
           }
         } else if payload.Action == "edited" { /* Update the list */
           /* Corner case, user removed the list */
-          if card.Checklist != nil && len(checkitems) == 0 {
-            issue.Checkmap = nil
-            issue.Checklist = nil
+          if card.Checklist != nil && len(issue.Checklist) == 0 {
             card.DelChecklist()
           } else {
             /* Walk one by one and apply changes */
-            for i, v := range checkitems {
+            for i, v := range issue.Checklist {
               /* If we overstep the original list means we have to add */
-              if i >= len(issue.Checklist) {
-                id := card.Checklist.PostToChecklist(v)
-                issue.Checkmap[id] = len(issue.Checklist) + 1
-                issue.Checklist = append(issue.Checklist, v)
-              } else {
-                /* Else apply modifications */
-                v.Id = issue.Checklist[i].Id
-                if v.Checked != issue.Checklist[i].Checked {
-                  card.Checklist.UpdateItemState(v.Id, v.Checked)
-                  issue.Checklist[i] = v
+              if i >= len(card.Checklist.Items) {
+                card.Checklist.PostToChecklist(v)
+              } else { /* Otherwise post updates */
+                if gtext := g2t(v.Text); gtext != card.Checklist.Items[i].Text {
+                  card.Checklist.UpdateItemName(i, gtext)
                 }
-                if v.Text != issue.Checklist[i].Text {
-                  card.Checklist.UpdateItemName(v.Id, v.Text)
-                  issue.Checklist[i] = v
+                if v.Checked != card.Checklist.Items[i].Checked {
+                  card.Checklist.UpdateItemState(i, v.Checked)
                 }
               }
             }
             /* If the incoming list was shorter, remove excess ones */
-            for i := len(issue.Checklist) -1 ; i >= len(checkitems); i-- {
-              card.Checklist.DelItem(issue.Checklist[i].Id)
-              delete(issue.Checkmap, issue.Checklist[i].Id)
-              issue.Checklist = issue.Checklist[:(i-1)]
+            for i := len(issue.Checklist) -1 ; i >= len(card.Checklist.Items); i-- {
+              card.Checklist.DelItem(i)
             }
           }
           /* TODO: some kind of merging algorithm */
         }
-
-        if (needsUpdateBody) {
-          card.UpdateDesc(issue.Body)
-        }
-        if (needsUpdateTitle) {
-          card.UpdateDesc(issue.Title)
-        }
-
         return http.StatusOK, "Got your back, captain."
       } else {
         return http.StatusNotFound, "You sure we serve this repo? I don't think so."

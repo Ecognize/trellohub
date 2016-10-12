@@ -18,7 +18,6 @@ type Issue struct {
 
   Labels      Set             `json:"-"`
   Members     Set             `json:"-"`
-  Checkmap    map[string]int  `json:"-"`
   Checklist   []CheckItem     `json:"-"`
 }
 
@@ -47,19 +46,23 @@ func (issue *Issue) cache() {
 /* Retrieves the issue data from the server */
 func (issue *Issue) update() {
   GenGET(issue.github, issue.ApiURL(), issue)
-  newbody, checkitems := issue.GetChecklist(cache.TrelloUserByGitHub, payload.Issue.Body)
+  issue.GenChecklist()
 }
 
-/* Parses body and outputs the actual body and checklists, takes username correspondence table as input */
+/* Parses body and outputs the checklists, also modifies body */
 // TODO nested checklists (#24)
-func (issue *Issue) GetChecklist(utable map[string]string, body string) (string, []CheckItem) {
+func (issue *Issue) GenChecklist() {
+  /* Extracting checkitems */
   checkitems := make([]CheckItem, 0)
-  res := StrSub(body, REGEX_GH_CHECK, func (v []string) string {
-    checkitems = append(checkitems, CheckItem{ Checked: v[1][0] != ' ', Text: RepMentions(v[2], utable) })
+  issue.Body = StrSub(issue.Body, REGEX_GH_CHECK, func (v []string) string {
+    checkitems = append(checkitems, CheckItem{ Checked: v[1][0] != ' ', Text: v[2] })
     return ""
   })
-
-  return RepMentions(res, utable), checkitems
+  if len(checkitems) > 0 {
+    issue.Checklist = checkitems
+  } else {
+    issue.Checklist = nil 
+  }  
 }
 
 /* Requests a reference to the issue */
@@ -69,7 +72,7 @@ func (github *GitHub) GetIssue(repoid string, issueno int) *Issue {
     return issue
   } else {
     res.github = github
-    res.update() Do we need it ever?
+    res.update() 
     res.cache()
     res.Members = NewSet()
     res.Labels = NewSet()

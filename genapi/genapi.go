@@ -17,7 +17,7 @@ const REGEX_GH_REPO string = "^(?:https?://)?github.com/" + REGEX_GH_OWNREPO
 const REGEX_GH_ISSUE string = REGEX_GH_REPO + "/issues/([0-9]*)"
 // TODO: this ignores nesting, only top level is processed
 // TODO: this might not work well with backslashes
-const REGEX_GH_CHECK string = "(?:^|\\r\\n)- \\[([ x])\\] ([^\\r]*)"
+const REGEX_GH_CHECK string = "(?:^|\\r\\n)- \\[([ xX])\\] ([^\\r]*)"
 // TODO: possibly separate GH and Trello version
 const REGEX_GH_USER string = "(?i)@([a-z0-9][a-z0-9-]{0,38}[a-z0-9])"
 const REGEX_GH_MAGIC string = "(?i)(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[[:space:]]*" + REGEX_GH_OWNREPO + "#([0-9]*)"
@@ -43,18 +43,6 @@ type CheckItem struct {
   Text    string    `json:"name"`
   Id      string    `json:"id"`
   State   string    `json:"state"`
-}
-
-func (ch *CheckItem) FromTrello() {
-  ch.Checked = (ch.State == "complete")
-}
-
-func (ch *CheckItem) ForTrello() {
-  if (ch.Checked) {
-    ch.State = "complete"
-  } else {
-    ch.State = "incomplete"
-  }
 }
 
 /* Reverse a dictionary (check if standar exist?) */
@@ -190,6 +178,6 @@ func processResponce(resp *http.Response, err error, v interface{}) {
       json.Unmarshal(body, &v)
     }
 
-    // log.Println(string(body[:]))
+    //log.Println(string(body[:]))
   }
 }
