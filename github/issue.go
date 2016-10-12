@@ -19,6 +19,8 @@ type Issue struct {
   Labels      Set             `json:"-"`
   Members     Set             `json:"-"`
   Checklist   []CheckItem     `json:"-"`
+  // TODO: remove when #32 is fixed
+  Newbody     string          `json:"-"`
 }
 
 /* Auto-converions to string */

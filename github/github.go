@@ -13,6 +13,12 @@ type Payload struct {
   }                 `json:"repository"`
   Assignees
   Label   Label     `json:"label"`
+  // TODO: remove when #32 is fixed
+  Changes struct {
+    Body  struct {
+      From string   `json:"from"`
+    }               `json:"body"`
+  }                 `json:"changes"`
 }
 
 /* Make some fields private maybe */

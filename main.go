@@ -350,6 +350,8 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
           newbody = newbody + card.Checklist.Render()
         }
         card.Issue.UpdateBody(t2g(newbody))
+        // TODO: remove when #32 is fixed
+        card.Issue.Newbody = t2g(newbody)
       }
       return http.StatusOK, "Checklists updated"
 
@@ -378,7 +380,16 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         /* Generating an in-DB refernce and updating it */
         issue := github_obj.GetIssue(payload.Repo.Spec, payload.Issue.IssueNo)
         issue.Title = payload.Issue.Title
-        issue.Body = payload.Issue.Body
+        
+        // TODO: remove when #32 is fixed
+        if payload.Changes.Body.From == payload.Issue.Body && len(issue.Newbody) > 0 {
+          /* Aww crappity! */
+          log.Printf("[BUG] Server sent us nonsense payload, using in-house data.")
+          issue.Body = issue.Newbody
+          issue.Newbody = ""
+        } else {        
+          issue.Body = payload.Issue.Body
+        }
         issue.GenChecklist()
         
         /* Shortcuts */
