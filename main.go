@@ -96,7 +96,11 @@ func main() {
     /* Instantiating globals */
     trello_obj = trello.New(config.TrelloKey, config.TrelloToken, config.BoardId)
     github_obj = github.New(config.GitHubToken)
-    trello_obj.Startup(github_obj)
+    go func () {
+      cache.mutex.Lock()
+      defer cache.mutex.Unlock()
+      trello_obj.Startup(github_obj)
+    }()
 
     /* List indexes */
     json.Unmarshal([]byte(GetEnv("LISTS")), &trello_obj.Lists)
@@ -118,7 +122,11 @@ func main() {
     /* Ensuring Trello hook */
     /* TODO: study if this doesn't cause races */
     // TODO: ex SIGTERM problem
-    go trello_obj.EnsureHook(config.BaseURL + "/trello")
+    go func () {
+      cache.mutex.Lock()
+      defer cache.mutex.Unlock()
+      trello_obj.EnsureHook(config.BaseURL + "/trello")
+    }()
 
     /* Fill the GitHub label names cache */
     cache.GitLabelByListId = map[string]string {
@@ -144,7 +152,7 @@ func GeneralisedProcess(w http.ResponseWriter, r *http.Request, f handleSubrouti
   /* We don't care about performance, therefore enforce that only one proc can be running at a given time */
   cache.mutex.Lock()
   defer cache.mutex.Unlock()
-  
+
   // TODO io.LimitReader
   // TODO check if its or POST
   body, err := ioutil.ReadAll(r.Body)
@@ -372,7 +380,7 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
     var payload github.Payload
     json.Unmarshal(body, &payload)
     log.Printf("[Github Issues] %s", payload.Action)
-    
+
     /* Guess we have a new issue */
     switch (payload.Action) {
     case "opened","edited":
@@ -381,18 +389,18 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
         /* Generating an in-DB refernce and updating it */
         issue := github_obj.GetIssue(payload.Repo.Spec, payload.Issue.IssueNo)
         issue.Title = payload.Issue.Title
-        
+
         // TODO: remove when #32 is fixed
         if payload.Changes.Body.From == payload.Issue.Body && len(issue.Newbody) > 0 {
           /* Aww crappity! */
           log.Printf("[BUG] Server sent us nonsense payload, using in-house data.")
           issue.Body = issue.Newbody
           issue.Newbody = payload.Issue.Body // just in case
-        } else {        
+        } else {
           issue.Body = payload.Issue.Body
         }
         issue.GenChecklist()
-        
+
         /* Shortcuts */
         trello_title := g2t(issue.Title)
         trello_descr := g2t(issue.Body)

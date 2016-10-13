@@ -8,6 +8,7 @@ import (
   "log"
   "strconv"
   "regexp"
+  . "time"
 )
 
 type Card struct {
@@ -122,6 +123,11 @@ func (trello *Trello) makeCardCache() {
     card.trello = trello
     card.load()
     card.cache()
+
+    // TODO implement a more sophisticated rate limit evasion mechanism
+    // for now it's ok
+    log.Printf("Sleeping 1 second")
+    Sleep(1 * Second)
   }
 }
 
