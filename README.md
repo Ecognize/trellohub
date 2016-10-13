@@ -22,7 +22,6 @@ Code generally not thread-safe, race conditions possible in case of fast event s
   - Attaches the issue URL to the card
   - Applies the repository label to the card
   - On GitHub assigns the "inbox" label to the issue
-  - If issue text contains a checklist, copies the same checklist over Trello
 - Card moved between the lists
   - Changes the corresponding label provided the card was moved between lists in service
 - Issue labelled on GitHub with a label of the list
@@ -31,6 +30,7 @@ Code generally not thread-safe, race conditions possible in case of fast event s
   - Assigns/unassigns the same user (using a correspondence table) to the card
 - @mention is used in description or checklist at Trello or GitHub
   - Replaces the @mention with a corresponding username on the linked resource
+- Creating, checking and updating checklists are synchronised over both Trello and GitHub
 
 # Far Horizon
 
