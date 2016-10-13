@@ -8,7 +8,7 @@ import (
   "log"
   "strconv"
   "regexp"
-  . "time"
+  . "time" // what the fug? without direct import it complains
 )
 
 type Card struct {
@@ -42,7 +42,7 @@ func (card *Card) load() {
 
   /* We don't really care to hold attachments array, just check if there is something to link */
   var data []Object
-  GenGET(card.trello, "/cards/" + card.Id + "/attachments/", &data)
+  GenGET(card.trello, "/cards/" + card.Id + "/attachments", &data)
   issuesFound := 0
   for _, v := range data {
     re := regexp.MustCompile(REGEX_GH_ISSUE)
@@ -51,6 +51,7 @@ func (card *Card) load() {
       if issuesFound > 1 {
         log.Printf("WARNING: Duplicate issue attachments found on card #%s.", card.Id)
       } else {
+        log.Printf("Issue URL: %s", v.Name)
         issueno, _ := strconv.Atoi(res[2])
         card.LinkIssue(card.trello.github.GetIssue(res[1], issueno))
       }
