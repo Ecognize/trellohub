@@ -172,7 +172,7 @@ func processResponce(resp *http.Response, err error, v interface{}) {
 
     if resp.StatusCode < 200 || resp.StatusCode > 299 {
       log.Printf("HTTP request returned response %d\n", resp.StatusCode)
-      log.Fatalln(string(body[:]))
+      log.Printf("[ERROR] %s", string(body[:])) // TODO error return or smth?
     } else if v != nil {
       /* TODO check json errors */
       json.Unmarshal(body, &v)
