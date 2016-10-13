@@ -30,7 +30,7 @@ func (card *Card) CopyChecklist(checklist *Checklist) {
   card.Checklist.card = card
   card.Checklist.Items = make([]CheckItem, len(checklist.Items))
   for i, v := range checklist.Items {
-    card.Checklist.Items[i] = CheckItem{ v.State == "completed", v.Text, v.Id, v.State }
+    card.Checklist.Items[i] = CheckItem{ v.State == "complete", v.Text, v.Id, v.State }
   }
   card.Checklist.Id = checklist.Id
   card.Checklist.updateLookup()
@@ -44,6 +44,18 @@ func (checklist *Checklist) updateLookup() {
     for i,v := range checklist.Items {
       checklist.in2id[i] = v.Id
       checklist.id2in[v.Id] = i
+    }
+  }
+}
+
+/* Ensures items are in correct order, fixes out of band delivery of checklist items
+   That's probably a bad way to do it, but it works for now. TODO: come up with something */
+func (checklist *Checklist) EnsureOrder() {
+  var data []CheckItem 
+  GenGET(checklist.card.trello, "/checklists/" + checklist.Id + "/checkItems", &data)
+  for i, v := range checklist.Items {
+    if data[i].Id != v.Id {
+      log.Printf("[BUG] Wrong order delivery detected at position %d", i)
     }
   }
 }
@@ -104,6 +116,7 @@ func (card *Card) DelChecklist() {
 
 /* Add an item to checklist, note must have an Id */
 func (checklist *Checklist) AddToChecklist(itm CheckItem) {
+  itm.Checked = itm.State == "complete"
   n := len(checklist.Items) 
   checklist.Items = append(checklist.Items, itm)
   checklist.in2id = append(checklist.in2id, itm.Id)  

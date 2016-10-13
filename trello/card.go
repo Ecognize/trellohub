@@ -62,8 +62,8 @@ func (card *Card) load() {
 
 /* Adds a card to the list with a given name and returns the card id */
 func (trello *Trello) AddCard(listid string, name string, desc string) *Card {
-  data := Card{ trello: trello, Members: NewSet() }
-  GenPOSTForm(trello, "/cards/", &data, url.Values{
+  data := &Card{ trello: trello, Members: NewSet() }
+  GenPOSTForm(trello, "/cards/", data, url.Values{
     "name": { name },
     "idList": { listid },
     "desc": { desc },
@@ -72,7 +72,7 @@ func (trello *Trello) AddCard(listid string, name string, desc string) *Card {
   data.cache()
   // TODO if error
 
-  return &data
+  return data
 }
 
 /* Retrieves the card from the server */
@@ -95,6 +95,9 @@ func (card *Card) attachURL(addr string) {
 
 func (card *Card) AttachIssue(issue *github.Issue) {
   card.attachURL(issue.IssueURL())
+  /* We don't have a change to wait until the update, add up instantly */
+  card.Issue = issue
+  card.cache()
 }
 
 /* Move a card to the different list */

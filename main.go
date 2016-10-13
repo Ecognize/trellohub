@@ -315,6 +315,7 @@ func TrelloFunc(w http.ResponseWriter, r *http.Request) {
         }
       case "createCheckItem":
         card.Checklist.AddToChecklist(event.Action.Data.ChItem)
+        card.Checklist.EnsureOrder()
         if checklist := card.Issue.Checklist; checklist != nil && len(card.Checklist.Items) <= len(checklist) {
           needsUpdate = false
         }
