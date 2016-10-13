@@ -45,13 +45,13 @@ func (card *Card) load() {
   GenGET(card.trello, "/cards/" + card.Id + "/attachments", &data)
   issuesFound := 0
   for _, v := range data {
+    log.Print("Found attachment: %s", v.Name)
     re := regexp.MustCompile(REGEX_GH_ISSUE)
     if res := re.FindStringSubmatch(v.Name); res != nil {
       issuesFound ++;
       if issuesFound > 1 {
         log.Printf("WARNING: Duplicate issue attachments found on card #%s.", card.Id)
       } else {
-        log.Printf("Issue URL: %s", v.Name)
         issueno, _ := strconv.Atoi(res[2])
         card.LinkIssue(card.trello.github.GetIssue(res[1], issueno))
       }
@@ -135,7 +135,6 @@ func (trello *Trello) makeCardCache() {
 /* Attach an Issue link */
 func (card *Card) LinkIssue(issue *github.Issue) {
   if (card.Issue != issue) {
-    card.trello.cardByIssue[issue.String()] = card
     card.Issue = issue
     card.cache()
   }
