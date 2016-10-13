@@ -45,7 +45,7 @@ func (card *Card) load() {
   GenGET(card.trello, "/cards/" + card.Id + "/attachments", &data)
   issuesFound := 0
   for _, v := range data {
-    log.Print("Found attachment: %s", v.Name)
+    log.Printf("Found attachment: %s", v.Name)
     re := regexp.MustCompile(REGEX_GH_ISSUE)
     if res := re.FindStringSubmatch(v.Name); res != nil {
       issuesFound ++;
