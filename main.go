@@ -534,8 +534,24 @@ func IssuesFunc(w http.ResponseWriter, r *http.Request) {
 
 func PullFunc(w http.ResponseWriter, r *http.Request) {
   GeneralisedProcess(w, r, func (body []byte) (int, string) {
-    log.Print(string(body[:]))
+    /* TODO check json errors */
+    /* TODO check it was github who sent it anyway */
+    /* TODO check whether we serve this repo */
+    var payload github.Payload
+    json.Unmarshal(body, &payload)
+    log.Printf("[Github PRs] %s", payload.Action)
 
+    switch (payload.Action) {
+      case "opened", "synchronize":
+      /* Look up the corresponding trello label */
+      if labelid := trello_obj.GetLabel(payload.Repo.Spec); len(labelid) > 0 {
+        /* Generating an in-DB refernce and updating it */
+        pull := github_obj.GetPull(payload.Repo.Spec, payload.Pull.IssueNo)
+        
+        log.Printf("%v", pull.AffectedIssues())
+      }
+    }
+    
     return http.StatusOK, "I can't really process this, but fine."
   })
 }

@@ -8,6 +8,7 @@ import (
 type Payload struct {
   Action  string    `json:"action"`
   Issue   Issue     `json:"issue"`
+  Pull    Pull      `json:"pull_request"`
   Repo  struct {
     Spec  string    `json:"full_name"`
   }                 `json:"repository"`
@@ -47,6 +48,7 @@ func New(token string) *GitHub {
   t := new(GitHub)
   t.Token = token
   t.issueBySpec = make(map[string]*Issue)
+  t.pullBySpec = make(map[string]*Pull)
 
   return t
 }
@@ -54,6 +56,7 @@ func New(token string) *GitHub {
 type GitHub struct {
   Token         string
   issueBySpec   map[string]*Issue
+  pullBySpec    map[string]*Pull
 }
 
 func (github *GitHub) AuthQuery() string {
