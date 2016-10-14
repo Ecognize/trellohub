@@ -119,6 +119,9 @@ func main() {
     http.HandleFunc("/pull", PullFunc)
     http.HandleFunc("/pull/", PullFunc)
 
+    http.HandleFunc("/push", PushFunc)
+    http.HandleFunc("/push/", PushFunc)
+
     /* Ensuring Trello hook */
     /* TODO: study if this doesn't cause races */
     // TODO: ex SIGTERM problem
@@ -547,7 +550,7 @@ func PullFunc(w http.ResponseWriter, r *http.Request) {
       if labelid := trello_obj.GetLabel(payload.Repo.Spec); len(labelid) > 0 {
         /* Generating an in-DB refernce and updating it */
         pull := github_obj.GetPull(payload.Repo.Spec, payload.Pull.IssueNo)
-        
+
         /* For each issue try to move to Review list if it's not there already */
         for _, v := range pull.AffectedIssues() {
           if card := trello_obj.FindCard(v.String()); card != nil {
@@ -561,7 +564,35 @@ func PullFunc(w http.ResponseWriter, r *http.Request) {
         }
       }
     }
-    
+
+    return http.StatusOK, "I can't really process this, but fine."
+  })
+}
+
+func PushFunc(w http.ResponseWriter, r *http.Request) {
+  GeneralisedProcess(w, r, func (body []byte) (int, string) {
+    /* TODO check json errors */
+    /* TODO check it was github who sent it anyway */
+    /* TODO check whether we serve this repo */
+    var payload github.Push
+    json.Unmarshal(body, &payload)
+    log.Printf("[Github push] %s", payload.Action)
+
+    if labelid := trello_obj.GetLabel(payload.Repo.Spec); len(labelid) > 0 {
+      /* For each issue try to move to Review list if it's not there already */
+      for _, v := range push.AffectedIssues() {
+        log.Printf("%s", v)
+        // if card := trello_obj.FindCard(v.String()); card != nil {
+        //   if card.ListId != trello_obj.Lists.ReviewId {
+        //     card.Move(trello_obj.Lists.ReviewId)
+        //   }
+        // } else {
+        //   log.Printf("Can't find the card for issue %s", v.String())
+        //   return http.StatusNotFound, "No card found for the issue"
+        // }
+      }
+    }
+
     return http.StatusOK, "I can't really process this, but fine."
   })
 }

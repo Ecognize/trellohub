@@ -5,13 +5,15 @@ import (
   . "github.com/ErintLabs/trellohub/genapi"
 )
 
+type Repo struct {
+  Spec    string   `json:"full_name"`
+}
+
 type Payload struct {
   Action  string    `json:"action"`
   Issue   Issue     `json:"issue"`
   Pull    Pull      `json:"pull_request"`
-  Repo  struct {
-    Spec  string    `json:"full_name"`
-  }                 `json:"repository"`
+  Repo    Repo      `json:"repository"`
   Assignees
   Label   Label     `json:"label"`
   // TODO: remove when #32 is fixed
@@ -23,10 +25,12 @@ type Payload struct {
 }
 
 /* Make some fields private maybe */
+type Commit    struct {
+  Message string  `json:"message"`
+}
+
 type GitCommit struct {
-  Commit    struct {
-    Message string  `json:"message"`
-  }                 `json:"commit"`
+  Commit Commit     `json:"commit"`
 }
 
 type Assignees struct {
@@ -78,6 +82,7 @@ func (github *GitHub) EnsureHook(repoid string, callbackURLbase string) {
   hookevts := map[string] struct { event string; found bool } {
     "/issues": { "issues", false },
     "/pull": { "pull_request", false},
+    "/push": { "push", false },
   }
 
   /* Checking if there is a hook with exact same parameters */
