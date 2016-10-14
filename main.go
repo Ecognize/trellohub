@@ -576,11 +576,12 @@ func PushFunc(w http.ResponseWriter, r *http.Request) {
     /* TODO check whether we serve this repo */
     var payload github.Push
     json.Unmarshal(body, &payload)
-    log.Printf("[Github push] %s", payload.Action)
+    log.Printf("[Github push]")
+    payload.SetGitHub(github_obj)
 
     if labelid := trello_obj.GetLabel(payload.Repo.Spec); len(labelid) > 0 {
       /* For each issue try to move to Review list if it's not there already */
-      for _, v := range push.AffectedIssues() {
+      for _, v := range payload.AffectedIssues() {
         log.Printf("%s", v)
         // if card := trello_obj.FindCard(v.String()); card != nil {
         //   if card.ListId != trello_obj.Lists.ReviewId {
