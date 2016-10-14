@@ -54,7 +54,9 @@ func (checklist *Checklist) EnsureOrder() {
   var data []CheckItem 
   GenGET(checklist.card.trello, "/checklists/" + checklist.Id + "/checkItems", &data)
   for i, v := range checklist.Items {
-    if data[i].Id != v.Id {
+    if i >= len(data) {
+      log.Printf("[BUG] Internal representation of checklist has more items than on server")
+    } else if data[i].Id != v.Id {
       log.Printf("[BUG] Wrong order delivery detected at position %d", i)
     }
   }
