@@ -18,14 +18,15 @@ import (
 var trello_obj *trello.Trello
 var github_obj *github.GitHub;
 var config struct {
-  BaseURL       string
-  BoardId       string
-  TrelloKey     string
-  TrelloToken   string
-  GitHubToken   string
-  Port          string
-  StableBranch  string
-  TestBranch    string
+  BaseURL         string
+  BoardId         string
+  TrelloKey       string
+  TrelloToken     string
+  GitHubToken     string
+  Port            string
+  StableBranch    string
+  TestBranch      string
+  UnstableBranch  string
 }
 
 var cache struct {
@@ -91,7 +92,7 @@ func main() {
 
     /* GitHub config */
     config.GitHubToken = GetEnv("GITHUB_TOKEN")
-    config.StableBranch, config.TestBranch = GetEnv("STABLE_BRANCH"), GetEnv("TEST_BRANCH")
+    config.StableBranch, config.TestBranch, config.UnstableBranch = GetEnv("STABLE_BRANCH"), GetEnv("TEST_BRANCH"), GetEnv("UNSTABLE_BRANCH")
 
     /* Instantiating globals */
     trello_obj = trello.New(config.TrelloKey, config.TrelloToken, config.BoardId)
@@ -580,17 +581,26 @@ func PushFunc(w http.ResponseWriter, r *http.Request) {
     payload.SetGitHub(github_obj)
 
     if labelid := trello_obj.GetLabel(payload.Repo.Spec); len(labelid) > 0 {
-      /* For each issue try to move to Review list if it's not there already */
       for _, v := range payload.AffectedIssues() {
-        log.Printf("%s", v)
-        // if card := trello_obj.FindCard(v.String()); card != nil {
-        //   if card.ListId != trello_obj.Lists.ReviewId {
-        //     card.Move(trello_obj.Lists.ReviewId)
-        //   }
-        // } else {
-        //   log.Printf("Can't find the card for issue %s", v.String())
-        //   return http.StatusNotFound, "No card found for the issue"
-        // }
+        if card := trello_obj.FindCard(v.String()); card != nil {
+          var listid string
+          switch payload.Branch {
+          case config.StableBranch:
+            listid = trello_obj.Lists.AcceptId
+          case config.UnstableBranch:
+            listid = trello_obj.Lists.MergedId
+          case config.TestBranch:
+            listid = trello_obj.Lists.DeployId
+          default:
+            // attach feature branch #34
+          }
+
+          if len(listid) > 0 && card.ListId != listid {
+            card.Move(listid)
+          }
+        } else {
+          log.Printf("Can't find the card for issue %s", v.String())
+        }
       }
     }
 
