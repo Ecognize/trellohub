@@ -548,7 +548,17 @@ func PullFunc(w http.ResponseWriter, r *http.Request) {
         /* Generating an in-DB refernce and updating it */
         pull := github_obj.GetPull(payload.Repo.Spec, payload.Pull.IssueNo)
         
-        log.Printf("%v", pull.AffectedIssues())
+        /* For each issue try to move to Review list if it's not there already */
+        for _, v := range pull.AffectedIssues() {
+          if card := trello_obj.FindCard(v.String()); card != nil {
+            if card.ListId != trello_obj.Lists.ReviewId {
+              card.Move(trello_obj.Lists.ReviewId)
+            }
+          } else {
+            log.Printf("Can't find the card for issue %s", v.String())
+            return http.StatusNotFound, "No card found for the issue"
+          }
+        }
       }
     }
     
