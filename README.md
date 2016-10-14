@@ -31,6 +31,9 @@ Code generally not thread-safe, race conditions possible in case of fast event s
 - @mention is used in description or checklist at Trello or GitHub
   - Replaces the @mention with a corresponding username on the linked resource
 - Creating, checking and updating checklists are synchronised over both Trello and GitHub
+- Creating a pull request drags all the cards issue for which is mentioned in the commit list to Review List
+- Pushing a set of commits to `STABLE_BRANCH`, `TEST_BRANCH` or `UNSTABLE_BRANCH` puts respective cards to respective lists
+  - Keep order, if you merge `master` from `dev` and then back, the second push will not be processed and cards will say in `dev`
 
 # Far Horizon
 
