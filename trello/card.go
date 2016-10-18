@@ -29,7 +29,7 @@ func (card *Card) cache() {
   if card.Issue != nil {
     issuestr := card.Issue.String()
     if card.trello.cardByIssue[issuestr] != card {
-      log.Printf("Card %s registered for issue %s", card.Id, issuestr)
+      log.Printf("Card %s registered for issue %s", card.Name, issuestr)
       card.trello.cardByIssue[issuestr] = card
     }
   }

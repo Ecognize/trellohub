@@ -12,7 +12,7 @@ import (
   "log"
 )
 
-const REGEX_GH_OWNREPO string = "(?i)([a-z0-9][a-z0-9-]{0,38}[a-z0-9]/[a-z0-9][a-z0-9-]{0,38}[a-z0-9])"
+const REGEX_GH_OWNREPO string = "(?i)([a-z0-9][a-z0-9-.]{0,38}[a-z0-9]/[a-z0-9][a-z0-9-.]{0,38}[a-z0-9])"
 const REGEX_GH_REPO string = "^(?:https?://)?github.com/" + REGEX_GH_OWNREPO
 const REGEX_GH_ISSUE string = REGEX_GH_REPO + "/issues/([0-9]*)"
 const REGEX_GH_BRANCH string = "(?i)^refs/heads/(.*)$"
